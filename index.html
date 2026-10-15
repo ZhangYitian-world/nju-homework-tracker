@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>作业记录本</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="作业记录本" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="theme-color" content="#f5f5f7" />
+<link rel="icon" href="icon-180.png" />
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --text: #1c1c1e;
+    --text-2: #6b6b73;
+    --text-3: #9a9aa2;
+    --line: #ececef;
+    --line-2: #e2e2e6;
+    --accent: #6b4fd8;
+    --accent-2: #8a72e6;
+    --accent-soft: #f0ecfd;
+    --red: #e5484d;
+    --red-soft: #fdecec;
+    --orange: #d97b06;
+    --orange-soft: #fdf3e3;
+    --green: #2f9e5f;
+    --green-soft: #e8f6ee;
+    --radius: 16px;
+    --shadow: 0 1px 2px rgba(16,16,24,.04), 0 6px 18px rgba(16,16,24,.05);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    padding: 20px 16px calc(96px + env(safe-area-inset-bottom));
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  .hidden { display: none !important; }
+  button { font-family: inherit; }
+  input, select, textarea { font-family: inherit; }
+
+  /* ============ 通用控件 ============ */
+  .btn {
+    border: none; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600;
+    padding: 11px 18px; background: var(--accent); color: #fff; transition: transform .12s, opacity .15s;
+  }
+  .btn:hover { opacity: .9; }
+  .btn:active { transform: scale(.975); }
+  .btn:disabled { opacity: .45; cursor: default; transform: none; }
+  .btn.ghost { background: var(--accent-soft); color: var(--accent); }
+  .btn.plain { background: #f0f0f2; color: var(--text); }
+  .btn.block { width: 100%; padding: 13px; font-size: 15px; border-radius: 13px; }
+  .btn.sm { padding: 9px 13px; font-size: 13px; border-radius: 10px; }
+  .link { background: none; border: none; color: var(--accent); font-size: 13px; cursor: pointer; padding: 4px 0; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12.5px; color: var(--text-2); margin-bottom: 7px; font-weight: 600; }
+  .field input, .field select, .field textarea {
+    width: 100%; border: 1px solid var(--line-2); border-radius: 12px; padding: 12px 13px;
+    font-size: 16px; background: #fafafa; color: var(--text); transition: border-color .15s, background .15s;
+  }
+  .field textarea { resize: vertical; min-height: 60px; }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(107,79,216,.09);
+  }
+  .msg { font-size: 13px; border-radius: 11px; padding: 10px 13px; margin-bottom: 14px; display: none; }
+  .msg.show { display: block; }
+  .msg.err { background: var(--red-soft); color: var(--red); }
+  .msg.ok { background: var(--green-soft); color: var(--green); }
+
+  /* ============ 登录页 ============ */
+  #authView { padding-top: 4vh; }
+  .brand { text-align: center; margin-bottom: 22px; }
+  .brand-mark {
+    width: 62px; height: 62px; border-radius: 17px; margin: 0 auto 14px;
+    background: linear-gradient(150deg, #7d63e0, #5b3fc9);
+    color: #fff; font-size: 27px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 20px rgba(107,79,216,.25);
+  }
+  .brand h1 { font-size: 21px; font-weight: 700; }
+  .brand p { color: var(--text-2); font-size: 13.5px; margin-top: 6px; }
+  .auth-card {
+    max-width: 400px; margin: 0 auto; background: var(--card);
+    border-radius: var(--radius); padding: 22px 20px; box-shadow: var(--shadow);
+  }
+  .tabs { display: flex; background: #f2f2f4; border-radius: 12px; padding: 3px; margin-bottom: 20px; }
+  .tabs button {
+    flex: 1; border: none; background: transparent; padding: 9px 0; border-radius: 9px;
+    font-size: 13.5px; font-weight: 600; color: var(--text-2); cursor: pointer; transition: all .15s;
+  }
+  .tabs button.active { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.09); }
+  .otp-row { display: flex; gap: 8px; align-items: flex-start; }
+  .otp-row .field { flex: 1; }
+  .otp-row .btn { margin-top: 27px; white-space: nowrap; }
+  .auth-foot { text-align: center; margin-top: 14px; color: var(--text-3); font-size: 12.5px; }
+
+  /* ============ 主界面 ============ */
+  .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+  .greet { font-size: 22px; font-weight: 700; }
+  .greet-sub { font-size: 13px; color: var(--text-3); margin-top: 3px; }
+  .topbar-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+  .user-bar { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-3); max-width: 190px; }
+  .user-bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat {
+    background: var(--card); border-radius: 14px; padding: 13px 14px; box-shadow: var(--shadow);
+  }
+  .stat b { display: block; font-size: 21px; font-weight: 700; }
+  .stat span { font-size: 12px; color: var(--text-3); }
+  .stat.warn b { color: var(--orange); }
+  .stat.good b { color: var(--green); }
+
+  .deadline-reminder {
+    margin: -4px 0 16px; padding: 12px 14px; border-left: 4px solid var(--orange);
+    border-radius: 10px; background: var(--orange-soft); color: var(--text);
+  }
+  .deadline-reminder-title { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; font-size: 13px; font-weight: 700; color: var(--orange); }
+  .deadline-reminder-title span { font-size: 12px; font-weight: 500; color: var(--text-2); }
+  .deadline-reminder-list { display: flex; flex-direction: column; }
+  .deadline-reminder-item {
+    display: flex; align-items: baseline; gap: 8px; width: 100%; padding: 6px 0;
+    border: 0; border-top: 1px solid rgba(217,123,6,.16); background: transparent;
+    color: inherit; text-align: left; font-size: 13px; cursor: pointer;
+  }
+  .deadline-reminder-item:first-child { border-top: 0; }
+  .deadline-reminder-item strong { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+  .deadline-reminder-item span { flex-shrink: 0; color: var(--text-2); font-size: 12px; }
+  .deadline-reminder-item:hover strong { color: var(--accent); }
+
+  .views { display: flex; gap: 5px; background: #ececed; border-radius: 13px; padding: 4px; margin-bottom: 14px; }
+  .views button {
+    flex: 1; border: none; background: transparent; padding: 10px 0; border-radius: 10px;
+    font-size: 14px; font-weight: 600; color: var(--text-2); cursor: pointer; transition: all .15s;
+  }
+  .views button.active { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.09); }
+
+  .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .search { flex: 1; min-width: 0; position: relative; }
+  .search input {
+    width: 100%; border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px 10px 34px;
+    font-size: 16px; background: var(--card); color: var(--text);
+  }
+  .search input:focus { outline: none; border-color: var(--accent); }
+  .search::before {
+    content: ""; position: absolute; left: 12px; top: 50%; width: 12px; height: 12px;
+    margin-top: -7px; border: 1.6px solid var(--text-3); border-radius: 50%;
+  }
+  .search::after {
+    content: ""; position: absolute; left: 21px; top: 50%; width: 5px; height: 1.6px;
+    margin-top: 3px; background: var(--text-3); transform: rotate(45deg);
+  }
+
+  .filters { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 10px; scrollbar-width: none; }
+  .filters::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0; border: 1px solid var(--line); background: var(--card); border-radius: 999px;
+    padding: 7px 14px; font-size: 12.5px; cursor: pointer; color: var(--text-2); white-space: nowrap; transition: all .15s;
+  }
+  .chip.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+  .group { margin-bottom: 20px; }
+  .group-head {
+    display: flex; align-items: center; gap: 8px; margin: 0 0 9px 3px;
+    font-size: 12.5px; font-weight: 700; color: var(--text-2);
+  }
+  .group-head .count {
+    font-weight: 600; font-size: 11px; color: var(--text-3); background: #ececef;
+    border-radius: 999px; padding: 1px 8px;
+  }
+  .group-head.late { color: var(--red); }
+  .group-head.late .count { background: var(--red-soft); color: var(--red); }
+  .group-head.soon { color: var(--orange); }
+  .group-head.soon .count { background: var(--orange-soft); color: var(--orange); }
+
+  .hw-list { display: flex; flex-direction: column; gap: 9px; }
+  .hw {
+    position: relative; display: flex; gap: 12px; align-items: flex-start;
+    background: var(--card); border-radius: 14px; padding: 14px 15px 14px 18px;
+    box-shadow: var(--shadow); overflow: hidden; transition: transform .12s;
+  }
+  .hw:active { transform: scale(.995); }
+  .hw::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--bar, #dcdce0);
+  }
+  .hw-main { flex: 1; min-width: 0; }
+  .hw-title { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+  .hw.done { box-shadow: none; background: #fbfbfc; }
+  .hw.done .hw-title { color: var(--text-3); font-weight: 500; text-decoration: line-through; text-decoration-color: var(--text-3); }
+  .hw-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 7px; font-size: 12px; color: var(--text-3); }
+  .course-tag { font-weight: 600; color: var(--text-2); }
+  .due { font-weight: 600; }
+  .due.late { color: var(--red); }
+  .due.soon { color: var(--orange); }
+  .due.ok { color: var(--text-3); }
+  .hw-note { margin-top: 8px; font-size: 13px; color: var(--text-2); overflow-wrap: anywhere; white-space: pre-wrap; padding-left: 9px; border-left: 2px solid var(--line-2); }
+  .hw-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .icon-btn {
+    border: none; background: #f4f4f6; border-radius: 9px; width: 32px; height: 32px;
+    cursor: pointer; font-size: 13px; color: var(--text-2); transition: all .15s;
+  }
+  .icon-btn:hover { background: var(--accent-soft); color: var(--accent); }
+  .icon-btn.done-btn { background: var(--green-soft); color: var(--green); }
+  .icon-btn.del-btn:hover { background: var(--red-soft); color: var(--red); }
+  .icon-btn { display: inline-flex; align-items: center; justify-content: center; }
+  .icon-btn svg { width: 17px; height: 17px; }
+  .icon-btn:disabled { opacity: .4; cursor: wait; }
+  .status-filter { min-width: 96px; max-width: 120px; height: 44px; padding: 0 8px; border: 1px solid var(--line); border-radius: 11px; color: var(--text-2); background: var(--card); font-size: 14px; }
+  .sync-bar { display: flex; gap: 8px; align-items: center; justify-content: flex-end; min-height: 42px; margin: 0 0 8px; font-size: 12px; color: var(--text-2); }
+  .sync-bar .error { color: var(--red); }
+  .sync-bar .icon-btn { background: transparent; }
+  button { touch-action: manipulation; }
+  button:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 3px; }
+  .row .field, .otp-row .field { min-width: 0; }
+  body.modal-open { overflow: hidden; }
+  @media (max-width: 640px) {
+    .hw { flex-wrap: wrap; gap: 10px; }
+    .hw-main { flex-basis: 100%; }
+    .hw-actions { width: 100%; justify-content: flex-end; border-top: 1px solid var(--line); padding-top: 8px; }
+    .hw-actions .done-btn { margin-right: auto; }
+    .icon-btn { width: 44px; height: 44px; }
+    .status-filter { font-size: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  .empty { text-align: center; padding: 54px 20px; }
+  .empty .icon {
+    width: 62px; height: 62px; border-radius: 18px; margin: 0 auto 16px;
+    background: #ededf0; display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+  }
+  .empty h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .empty p { font-size: 13px; color: var(--text-3); line-height: 1.7; }
+  .loading { text-align: center; color: var(--text-3); padding: 44px 0; font-size: 14px; }
+
+  .fab {
+    display: none; position: fixed; right: 20px; bottom: calc(22px + env(safe-area-inset-bottom));
+    height: 54px; padding: 0 22px; border-radius: 27px; border: none; cursor: pointer;
+    background: var(--accent); color: #fff; font-size: 15px; font-weight: 600;
+    box-shadow: 0 8px 22px rgba(107,79,216,.34); z-index: 5;
+  }
+  @media (max-width: 640px) {
+    .fab { display: block; }
+    #desktop-add { display: none; }
+    .greet { font-size: 20px; }
+  }
+
+  /* ============ 弹窗 ============ */
+  .overlay {
+    display: none; position: fixed; inset: 0; background: rgba(20,20,28,.4);
+    align-items: center; justify-content: center; padding: 16px; z-index: 10;
+    -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    background: var(--card); border-radius: 20px; padding: 22px;
+    width: 100%; max-width: 430px; max-height: 88vh; overflow-y: auto;
+    animation: pop .18s ease-out;
+  }
+  @keyframes pop { from { opacity: .6; transform: translateY(10px) scale(.98); } }
+  .modal h2 { font-size: 17px; font-weight: 700; margin-bottom: 18px; }
+  .row { display: flex; gap: 10px; }
+  .row .field { flex: 1; }
+  .modal-foot { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+  @media (max-width: 640px) {
+    .overlay { align-items: flex-end; padding: 0; }
+    .modal { border-radius: 20px 20px 0 0; max-width: 100%; padding-bottom: calc(22px + env(safe-area-inset-bottom)); animation: sheet .22s ease-out; }
+    @keyframes sheet { from { transform: translateY(30px); opacity: .7; } }
+  }
+  #originTip { max-width: 400px; margin: 0 auto 16px; }
+  /* Timetable import is a review workflow; the original screenshot stays on device. */
+  .tt-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:18px 0 14px; }
+  .tt-head h2 { font-size:18px; }
+  .tt-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .tt-meta { color:var(--text-2); font-size:13px; margin-bottom:12px; }
+  .tt-scroll { overflow-x:auto; background:white; border:1px solid var(--line-2); border-radius:8px; }
+  .tt-grid { display:grid; width:100%; grid-template-columns:54px repeat(7,minmax(0,1fr)); grid-template-rows:40px repeat(12,60px); position:relative; }
+  .tt-cell { min-width:0; border-right:1px solid var(--line); border-bottom:1px solid var(--line); padding:6px 2px; font-size:12px; text-align:center; }
+  .tt-cell small { display:block; font-size:10px; line-height:1.35; color:var(--text-2); }
+  .tt-lesson { min-width:0; margin:2px; z-index:1; border:0; border-left:3px solid var(--accent); border-radius:4px; padding:5px 3px; color:var(--text); text-align:left; background:#e8f6ee; overflow:hidden; cursor:pointer; font:inherit; font-size:11px; line-height:1.3; overflow-wrap:anywhere; }
+  .tt-lesson strong { display:block; font-weight:650; }
+  .tt-lesson small { display:block; margin-top:4px; color:var(--text-2); font-size:10px; overflow-wrap:anywhere; }
+  .tt-unplaced { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin:10px 0 14px; padding:10px 12px; border-left:3px solid var(--orange); background:var(--orange-soft); color:var(--text-2); font-size:12px; }
+  .tt-unplaced strong { display:block; margin-bottom:2px; color:var(--text); font-size:13px; }
+  .tt-unplaced p { margin:0; }
+  .tt-unplaced details { flex:0 0 auto; max-width:46%; }
+  .tt-unplaced summary { color:var(--accent); cursor:pointer; }
+  .tt-unplaced ul { margin:6px 0 0 16px; max-height:180px; overflow:auto; }
+  .tt-section { padding:18px 0; border-top:1px solid var(--line-2); }
+  .tt-section h3 { font-size:15px; margin-bottom:12px; }
+  .tt-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .tt-row .field { margin:0; }
+  .tt-note { font-size:12px; color:var(--text-2); margin:10px 0; overflow-wrap:anywhere; }
+  .tt-upload { display:block; border:1px dashed var(--accent); border-radius:8px; padding:14px; background:white; }
+  .tt-upload input { width:100%; margin-top:8px; font-size:14px; }
+  .tt-preview { display:block; width:100%; height:auto; max-height:620px; object-fit:contain; background:#e9e9ec; touch-action:none; }
+  .tt-bounds { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:12px 0; }
+  .tt-bounds input { padding:9px 5px; font-size:14px; }
+  .tt-check { display:flex; align-items:flex-start; gap:8px; font-size:13px; margin:12px 0; }
+  .tt-check input { width:18px; height:18px; flex-shrink:0; margin-top:1px; accent-color:var(--accent); }
+  .tt-progress { display:flex; gap:10px; align-items:center; font-size:13px; margin:12px 0; }
+  .tt-progress progress { width:100px; accent-color:var(--accent); }
+  .tt-review { border-bottom:1px solid var(--line-2); padding:16px 0; }
+  .tt-review-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; }
+  .tt-review-head strong { font-size:14px; }
+  .tt-review .field { margin-bottom:10px; }
+  .tt-review .tt-row .field { margin-bottom:10px; }
+  .tt-review:has(input[data-key="confirmed"]:checked) { border-left:3px solid var(--green); padding-left:10px; }
+  .tt-footer { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; flex-wrap:wrap; }
+  #tt-editor[aria-busy="true"] .tt-edit-control { pointer-events:none; opacity:.5; }
+  .tt-periods { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:12px; }
+  .tt-period-line { display:flex; align-items:center; gap:5px; font-size:12px; min-width:0; }
+  .tt-period-line input { min-width:0; width:100%; font-size:14px; padding:6px 3px; border:1px solid var(--line-2); border-radius:4px; }
+  @media (max-width:640px) {
+    .tt-head { align-items:flex-start; }
+    .tt-actions { gap:6px; }
+    .tt-actions .btn { padding:9px; }
+    .tt-periods { grid-template-columns:1fr; }
+    .tt-bounds { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .tt-grid { grid-template-columns:48px repeat(7,minmax(0,1fr)); grid-template-rows:38px repeat(12,58px); }
+    .tt-cell { padding:5px 1px; font-size:10px; }
+    .tt-cell small { font-size:9px; }
+    .tt-lesson { margin:1px; border-left-width:2px; padding:4px 2px; font-size:10.5px; }
+    .tt-lesson strong { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:6; overflow:hidden; }
+    .tt-lesson small { font-size:9px; }
+    .tt-unplaced { display:block; }
+    .tt-unplaced details { max-width:none; margin-top:8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== 登录 / 注册 ==================== -->
+<div class="wrap hidden" id="authView">
+  <div id="originTip" class="msg err"></div>
+  <div class="brand">
+    <div class="brand-mark">作</div>
+    <h1>作业记录本</h1>
+    <p>手机和电脑，看到的是同一份</p>
+  </div>
+
+  <div class="auth-card">
+    <div class="tabs">
+      <button id="tab-pwd" class="active" onclick="switchTab('pwd')">密码登录</button>
+      <button id="tab-otp" onclick="switchTab('otp')">验证码登录</button>
+      <button id="tab-signup" onclick="switchTab('signup')">注册</button>
+    </div>
+    <div class="msg" id="authMsg"></div>
+
+    <div id="pane-pwd">
+      <div class="field"><label>邮箱</label><input id="pwd-email" type="email" autocomplete="username" placeholder="you@example.com" /></div>
+      <div class="field"><label>密码</label><input id="pwd-pass" type="password" autocomplete="current-password" placeholder="请输入密码" /></div>
+      <button class="btn block" id="pwd-btn" onclick="doPasswordLogin()">登录</button>
+      <div class="auth-foot"><button class="link" onclick="switchTab('reset')">忘记密码？</button></div>
+    </div>
+
+    <div id="pane-otp" class="hidden">
+      <div class="otp-row">
+        <div class="field"><label>邮箱</label><input id="otp-email" type="email" autocomplete="email" placeholder="you@example.com" /></div>
+        <button class="btn ghost sm" id="otp-send" onclick="sendLoginCode()">获取验证码</button>
+      </div>
+      <div class="field"><label>邮箱收到的验证码</label><input id="otp-code" inputmode="numeric" placeholder="6 位数字" /></div>
+      <button class="btn block" id="otp-btn" onclick="doOtpLogin()">登录</button>
+      <div class="auth-foot">还没有账号？先用「注册」创建</div>
+    </div>
+
+    <div id="pane-signup" class="hidden">
+      <div class="otp-row">
+        <div class="field"><label>邮箱</label><input id="su-email" type="email" autocomplete="email" placeholder="you@example.com" /></div>
+        <button class="btn ghost sm" id="su-send" onclick="sendSignupCode()">获取验证码</button>
+      </div>
+      <div class="field"><label>邮箱收到的验证码</label><input id="su-code" inputmode="numeric" placeholder="6 位数字" /></div>
+      <div class="field"><label>设置密码</label><input id="su-pass" type="password" autocomplete="new-password" placeholder="至少 6 位，以后登录用" /></div>
+      <button class="btn block" id="su-btn" onclick="doSignup()">注册并登录</button>
+      <div class="auth-foot">已有账号？切到「密码登录」</div>
+    </div>
+
+    <div id="pane-reset" class="hidden">
+      <div class="otp-row">
+        <div class="field"><label>注册邮箱</label><input id="rs-email" type="email" placeholder="you@example.com" /></div>
+        <button class="btn ghost sm" id="rs-send" onclick="sendResetCode()">获取验证码</button>
+      </div>
+      <div class="field"><label>邮箱收到的验证码</label><input id="rs-code" inputmode="numeric" placeholder="6 位数字" /></div>
+      <div class="field"><label>设置新密码</label><input id="rs-pass" type="password" autocomplete="new-password" placeholder="至少 6 位" /></div>
+      <button class="btn block" id="rs-btn" onclick="doReset()">重置并登录</button>
+      <div class="auth-foot"><button class="link" onclick="switchTab('pwd')">返回登录</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 主界面 ==================== -->
+<div class="wrap hidden" id="appView">
+  <div class="topbar">
+    <div>
+      <div class="greet" id="greet">作业记录本</div>
+      <div class="greet-sub" id="greetSub"></div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn" id="desktop-add" onclick="openModal()">＋ 记一条</button>
+      <div class="user-bar"><span id="userEmail"></span><button class="link" onclick="doSignOut()">退出</button></div>
+    </div>
+  </div>
+
+  <div class="stats" id="hw-stats">
+    <div class="stat"><b id="stat-todo">0</b><span id="stat-todo-label">待完成</span></div>
+    <div class="stat warn"><b id="stat-soon">0</b><span id="stat-soon-label">已逾期 / 今天</span></div>
+    <div class="stat good"><b id="stat-done">0</b><span id="stat-done-label">已完成</span></div>
+  </div>
+  <section class="deadline-reminder hidden" id="deadlineReminder" aria-live="polite"></section>
+
+  <div class="views">
+    <button id="view-course" class="active" onclick="setView('course')">课程作业</button>
+    <button id="view-event" onclick="setView('event')">日程</button>
+    <button id="view-explore" onclick="setView('explore')">我的探索</button>
+    <button id="view-timetable" onclick="setView('timetable')">我的课表</button>
+  </div>
+
+  <div class="toolbar" id="hw-toolbar">
+    <div class="search"><input id="search" type="search" aria-label="搜索记录" placeholder="搜索内容、课程或备注" oninput="onSearch()" /></div>
+    <select id="statusFilter" class="status-filter" aria-label="筛选状态" onchange="render()"><option value="all">全部状态</option><option value="open">待完成</option><option value="todo">未开始</option><option value="doing">进行中</option><option value="done">已完成</option></select>
+  </div>
+  <div class="filters" id="filters"></div>
+  <div class="sync-bar"><span id="syncStatus" role="status" aria-live="polite">准备同步</span><button class="icon-btn" id="refresh-btn" onclick="loadItems()" title="刷新云端数据" aria-label="刷新云端数据">↻</button></div>
+  <div class="msg" id="dataMsg" role="alert"></div>
+  <div id="list"><div class="loading">正在读取云端数据…</div></div>
+  <section id="tt-view" class="hidden">
+    <div class="tt-head"><h2>我的课表</h2><div class="tt-actions"><button class="btn ghost sm" onclick="openTimetableEditor('edit')">校正课表</button><button class="btn sm" onclick="openTimetableEditor('import')">导入截图</button></div></div>
+    <div class="msg" id="tt-load-msg" role="alert"></div>
+    <div id="tt-display"></div>
+  </section>
+  <section id="tt-editor" class="hidden" aria-busy="false">
+    <div class="tt-head"><h2 id="tt-editor-title">导入课表</h2><button class="btn plain sm" onclick="closeTimetableEditor()">返回</button></div>
+    <div class="msg" id="tt-msg" role="alert"></div>
+    <div class="tt-edit-control">
+      <div class="tt-section"><h3>本科生课表</h3>
+        <div class="tt-row"><div class="field"><label for="tt-term">学期</label><input id="tt-term" placeholder="例：2026–2027 第1学期" maxlength="80" /></div><div class="field"><label for="tt-source-week">截图显示周次（可留空）</label><input id="tt-source-week" type="number" min="1" max="30" placeholder="第几周" /></div></div>
+        <details><summary class="tt-note">12 节课的起止时间</summary><div class="tt-periods" id="tt-periods"></div></details>
+      </div>
+      <div class="tt-section" id="tt-image-section"><h3>截图</h3>
+        <label class="tt-upload" for="tt-file">选择清晰截图<input id="tt-file" type="file" accept="image/png,image/jpeg,image/webp" onchange="loadTimetableImage(this.files[0])" /></label>
+        <p class="tt-note">PNG、JPG 或 WebP，最大 20 MB。截图仅在本机识别；保存的是确认后的课程文字。</p>
+        <div class="field" style="margin-top:12px"><label for="tt-image-mode">截图类型</label><select id="tt-image-mode" onchange="changeImageMode()"><option value="grid">周课表网格</option><option value="text">课程详情 / 文字列表</option></select></div>
+        <div id="tt-image-tools" class="hidden">
+          <canvas id="tt-preview" class="tt-preview" aria-label="课表截图和识别网格"></canvas>
+            <div class="tt-bounds">
+              <div class="field"><label for="tt-left">左边界 %</label><input id="tt-left" type="number" min="0" max="100" step="0.1" oninput="drawTimetablePreview(true)" /></div>
+              <div class="field"><label for="tt-right">右边界 %</label><input id="tt-right" type="number" min="0" max="100" step="0.1" oninput="drawTimetablePreview(true)" /></div>
+              <div class="field"><label for="tt-top">上边界 %</label><input id="tt-top" type="number" min="0" max="100" step="0.1" oninput="drawTimetablePreview(true)" /></div>
+              <div class="field"><label for="tt-bottom">下边界 %</label><input id="tt-bottom" type="number" min="0" max="100" step="0.1" oninput="drawTimetablePreview(true)" /></div>
+            </div>
+          <div id="tt-grid-tools">
+            <div class="tt-row">
+              <div class="field"><label for="tt-first-day">截图第一列</label><select id="tt-first-day" onchange="drawTimetablePreview(true)"></select></div>
+              <div class="field"><label for="tt-last-day">截图最后一列</label><select id="tt-last-day" onchange="drawTimetablePreview(true)"></select></div>
+              <div class="field"><label for="tt-first-period">截图第一行</label><select id="tt-first-period" onchange="drawTimetablePreview(true)"></select></div>
+              <div class="field"><label for="tt-last-period">截图最后一行</label><select id="tt-last-period" onchange="drawTimetablePreview(true)"></select></div>
+            </div>
+            <label class="tt-check"><input id="tt-grid-confirm" type="checkbox" />网格已对齐课程区域，列对应星期，行对应节次</label>
+          </div>
+          <div class="tt-actions"><button class="btn ghost sm" id="tt-locate" onclick="locateTimetableGrid()">自动定位网格</button><button class="btn sm" id="tt-recognize" onclick="recognizeTimetable()">识别课程</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="tt-progress hidden" id="tt-progress"><progress id="tt-progress-bar" max="1" value="0"></progress><span id="tt-progress-text" role="status" aria-live="polite"></span><button class="link" onclick="cancelTimetableOcr()">取消识别</button></div>
+    <div class="tt-edit-control">
+      <div class="tt-section"><h3 id="tt-review-title">待校正课程</h3><p class="tt-note">只填截图可见或你已核实的信息。周次支持 8、5-16、1-17单、2-18双、1-4,8,10-12。缺失信息保留为空，省略的课程名需补齐。</p><div id="tt-review"></div><button class="btn ghost sm" onclick="addTimetableLesson()">＋ 添加一节课程</button></div>
+      <div class="field"><label for="tt-save-mode">保存方式</label><select id="tt-save-mode"><option value="merge">合并到现有课表，保留原课程</option><option value="replace">替换整张课表</option></select></div>
+      <div class="tt-footer"><button class="btn ghost" onclick="exportTimetableDraft()">导出校正草稿</button><button class="btn plain" onclick="closeTimetableEditor()">取消</button><button class="btn" id="tt-save" onclick="saveTimetable()">确认并保存</button></div>
+    </div>
+  </section>
+</div>
+
+<button class="fab hidden" id="fab" onclick="openModal()">＋ 记一条</button>
+
+<!-- ==================== 弹窗 ==================== -->
+<div class="overlay" id="overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <h2 id="modal-title">记一条作业</h2>
+    <div class="field" id="row-course"><label>课程</label><input id="f-course" list="courseList" placeholder="选择或填写自己的课程" maxlength="200" /><datalist id="courseList"></datalist></div>
+    <div class="field hidden" id="row-label">
+      <label id="f-label-lbl">方向 / 领域</label>
+      <input id="f-label" list="labelList" placeholder="例：Rust 入门、摄影构图、AIGC 工具" />
+      <datalist id="labelList"></datalist>
+    </div>
+    <div class="field"><label id="f-title-lbl">作业内容</label><input id="f-title" placeholder="例：完成第三章习题 1-10 题" /></div>
+    <div class="row">
+      <div class="field"><label id="lbl-date">截止日期</label><input type="date" id="f-date" /></div>
+      <div class="field"><label id="lbl-time">截止时间（可选）</label><input type="time" id="f-time" /></div>
+    </div>
+    <div class="field hidden" id="row-location"><label for="f-location">地点（可选）</label><input id="f-location" maxlength="200" placeholder="未确定可留空" /></div>
+    <div class="field">
+      <label>状态</label>
+      <select id="f-status">
+        <option value="todo">未开始</option>
+        <option value="doing">进行中</option>
+        <option value="done">已完成</option>
+      </select>
+    </div>
+    <div class="field"><label>备注（可选）</label><textarea id="f-note" placeholder="例：提交到学习通，需要带草稿纸"></textarea></div>
+    <div class="msg" id="modalMsg"></div>
+    <div class="modal-foot">
+      <button class="btn plain" onclick="closeModal()">取消</button>
+      <button class="btn" id="save-btn" onclick="saveHw()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* 加载云服务 SDK：主域在国内偶发不通，带镜像自动切换 */
+(function () {
+  var urls = [
+    "https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js",
+    "https://fastly.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js",
+    "https://unpkg.com/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"
+  ];
+  var i = 0;
+  function next() {
+    if (i >= urls.length) {
+      document.body.insertAdjacentHTML("afterbegin",
+        '<div style="max-width:720px;margin:20px auto;padding:12px 14px;border-radius:12px;background:#fdecec;color:#e5484d;font-size:13px">依赖加载失败：请检查网络后刷新页面重试。</div>');
+      return;
+    }
+    var s = document.createElement("script");
+    s.src = urls[i++];
+    s.onload = function () {
+      if (!window.WorkBuddyCloud) return next();
+      // SDK may finish before the parser reaches the application script.
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", function () { startCloud(); }, { once: true });
+      } else startCloud();
+    };
+    s.onerror = next;
+    document.head.appendChild(s);
+  }
+  next();
+})();
+</script>
+<script>
+/* ===== 云服务初始化：endpoint 与 publishableKey 均来自 publicConfig ===== */
+const publicConfig = {
+  endpoint: "https://YOUR-APP-ID.app.workbuddy.host",
+  publishableKey: "wbpk_YOUR_APP_ID_YOUR_PUBLISHABLE_KEY",
+};
+let cloud = null;
+function startCloud() {
+  cloud = WorkBuddyCloud.createWorkBuddyCloud({
+    endpoint: publicConfig.endpoint,
+    publishableKey: publicConfig.publishableKey,
+  });
+  cloud.auth.onAuthStateChange(function (event) {
+    if (event === "SIGNED_OUT") { showAuth(); }
+  });
+  init();
+}
+
+const COURSES = [
+  { name: "高等数学", color: "#e8c93f" },
+  { name: "大学英语", color: "#4aa8dd" },
+  { name: "数据结构", color: "#9b7ee0" },
+  { name: "大学物理", color: "#4cc08a" },
+];
+
+let items = [];
+let view = "course";
+let filter = "all";
+let keyword = "";
+let editingId = null;
+let signupCtx = null;
+let pendingOtp = null;
+let resetCtx = null;
+let loadSequence = 0;
+let sessionEpoch = 0;
+let loading = false;
+let saving = false;
+let loadedOnce = false;
+let renderSignature = "";
+let returnFocus = null;
+const pendingItems = new Set();
+const TT_DAYS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+// Default 12-period times; adjust to your own school's schedule.
+const TT_PERIODS = [["08:00","08:50"],["09:00","09:50"],["10:10","11:00"],["11:10","12:00"],["14:00","14:50"],["15:00","15:50"],["16:10","17:00"],["17:10","18:00"],["18:30","19:20"],["19:30","20:20"],["20:30","21:20"],["21:30","22:20"]];
+let timetable = null, timetableRow = null, ttDraft = null, ttImage = null;
+let ttWorker = null, ttOcrRun = 0, ttOcrBusy = false, ttSaving = false, ttLoadSequence = 0;
+let ttSelectedWeek = null, ttLoadOK = false;
+
+/* ================= 工具 ================= */
+const $ = id => document.getElementById(id);
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function showMsg(el, text, type) { const b = $(el); b.textContent = text; b.className = "msg show " + (type === "ok" ? "ok" : "err"); }
+function hideMsg(el) { $(el).className = "msg"; }
+function busy(btnId, on, busyText, normalText) { const b = $(btnId); b.disabled = on; b.textContent = on ? (busyText || "处理中…") : normalText; }
+function courseOf(name) { return COURSES.find(c => c.name === name) || { name: name, color: "#c9c9d1" }; }
+function ownCourseNames() {
+  const names = (timetable && timetable.courses || []).concat((timetable && timetable.sessions || []).map(s => s.name));
+  return [...new Set(names.concat(items.filter(i => (i.kind || "course") === "course").map(i => i.course)).filter(Boolean))];
+}
+function refreshCourseOptions() { $("courseList").innerHTML = ownCourseNames().map(name => '<option value="' + esc(name) + '"></option>').join(""); }
+function dueTs(it) {
+  if (!it.due_date) return Infinity;
+  const d = new Date(it.due_date + "T" + (it.due_time ? it.due_time.slice(0, 5) : "23:59") + ":00");
+  return isNaN(d.getTime()) ? Infinity : d.getTime();
+}
+function startOfToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
+function dateKey(date) { return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0"); }
+function dayOffset(value) {
+  const [year, month, day] = value.split("-").map(Number);
+  const today = new Date();
+  return Math.round((Date.UTC(year, month - 1, day) - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000);
+}
+
+/* ================= 视图切换 ================= */
+function showAuth() {
+  sessionEpoch++;
+  loadSequence++;
+  loading = false;
+  loadedOnce = false;
+  renderSignature = "";
+  items = [];
+  cancelTimetableOcr();
+  timetable = null; timetableRow = null; ttDraft = null; ttImage = null; ttLoadOK = false; ttSelectedWeek = null;
+  ttLoadSequence++;
+  $("tt-editor").classList.add("hidden");
+  $("tt-review").innerHTML = "";
+  $("tt-display").innerHTML = "";
+  $("tt-term").value = "";
+  $("tt-source-week").value = "";
+  $("tt-periods").innerHTML = "";
+  hideMsg("tt-msg"); hideMsg("tt-load-msg");
+  $("tt-preview").width = 1;
+  $("tt-file").value = "";
+  $("f-course").value = "";
+  $("f-location").value = "";
+  $("f-label").value = "";
+  $("f-title").value = "";
+  $("f-note").value = "";
+  $("f-date").value = "";
+  $("f-time").value = "";
+  refreshCourseOptions();
+  $("userEmail").textContent = "";
+  $("list").innerHTML = '<div class="loading">正在读取云端数据…</div>';
+  $("authView").classList.remove("hidden");
+  $("appView").classList.add("hidden");
+  $("fab").classList.add("hidden");
+  $("overlay").classList.remove("show");
+  document.body.classList.remove("modal-open");
+  checkOrigin();
+}
+function showApp() { $("authView").classList.add("hidden"); $("appView").classList.remove("hidden"); $("fab").classList.remove("hidden"); updateViewButtons(); }
+function checkOrigin() {
+  const tip = $("originTip");
+  const host = publicConfig.endpoint.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  if (location.hostname !== host) {
+    tip.textContent = "提示：登录功能只在正式发布链接下可用。这里能看界面，但请用发布后的链接登录使用。";
+    tip.className = "msg show err";
+  } else { tip.className = "msg"; }
+}
+function switchTab(tab) {
+  hideMsg("authMsg");
+  ["pwd", "otp", "signup", "reset"].forEach(t => {
+    $("pane-" + t).classList.toggle("hidden", t !== tab);
+    const tb = $("tab-" + t);
+    if (tb) tb.classList.toggle("active", t === tab);
+  });
+}
+function setView(v) {
+  if (view === v || saving || $("overlay").classList.contains("show")) return;
+  if (ttSaving) return;
+  if (ttDraft && !closeTimetableEditor()) return;
+  view = v;
+  filter = "all";
+  keyword = "";
+  $("search").value = "";
+  $("statusFilter").value = "all";
+  updateViewButtons();
+  render();
+}
+function updateViewButtons() {
+  $("view-course").classList.toggle("active", view === "course");
+  $("view-event").classList.toggle("active", view === "event");
+  $("view-explore").classList.toggle("active", view === "explore");
+  $("view-timetable").classList.toggle("active", view === "timetable");
+  ["hw-stats", "hw-toolbar", "filters", "list", "desktop-add", "fab"].forEach(id => $(id).classList.toggle("hidden", view === "timetable"));
+  $("tt-view").classList.toggle("hidden", view !== "timetable" || !!ttDraft);
+  if (view === "timetable") $("deadlineReminder").classList.add("hidden");
+  const event = view === "event", statuses = event ? EVENT_STATUS_TXT : STATUS_TXT;
+  $("desktop-add").textContent = event ? "＋ 记日程" : "＋ 记一条";
+  $("fab").textContent = event ? "＋ 记日程" : view === "course" ? "＋ 记作业" : "＋ 记探索";
+  $("stat-todo-label").textContent = event ? "待参加" : "待完成";
+  $("stat-soon-label").textContent = event ? "时间已过 / 今天" : "已逾期 / 今天";
+  $("stat-done-label").textContent = event ? "已结束" : "已完成";
+  $("search").placeholder = event ? "搜索活动、地点或备注" : "搜索内容、课程或备注";
+  const statusValue = $("statusFilter").value;
+  $("statusFilter").innerHTML = '<option value="all">全部状态</option><option value="open">' + (event ? "未结束" : "待完成") + '</option>' + Object.entries(statuses).map(([key,label]) => '<option value="'+key+'">'+label+'</option>').join("");
+  $("statusFilter").value = statusValue || "all";
+  $("view-course").setAttribute("aria-pressed", String(view === "course"));
+  $("view-event").setAttribute("aria-pressed", String(event));
+  $("view-explore").setAttribute("aria-pressed", String(view === "explore"));
+  $("view-timetable").setAttribute("aria-pressed", String(view === "timetable"));
+}
+
+/* ================= 登录 / 注册 ================= */
+async function authCall(request) {
+  try { return await request() || {}; }
+  catch (error) { return { error: { message: "连接失败，请检查网络后重试。" } }; }
+}
+async function doPasswordLogin() {
+  const email = $("pwd-email").value.trim(), password = $("pwd-pass").value;
+  if (!email || !password) return showMsg("authMsg", "请填写邮箱和密码");
+  busy("pwd-btn", true, "登录中…", "登录");
+  const { error } = await authCall(() => cloud.auth.signInWithPassword({ email, password }));
+  busy("pwd-btn", false, "", "登录");
+  if (error) return showMsg("authMsg", error.message === "连接失败，请检查网络后重试。" ? error.message : "账号或密码不对，请重试");
+  await enterApp();
+}
+async function sendLoginCode() {
+  const email = $("otp-email").value.trim();
+  if (!email) return showMsg("authMsg", "请先填写邮箱");
+  busy("otp-send", true, "发送中…", "获取验证码");
+  const res = await authCall(() => cloud.auth.signInWithOtp({ email }));
+  busy("otp-send", false, "", "获取验证码");
+  if (res.error) return showMsg("authMsg", res.error.message || "验证码发送失败");
+  pendingOtp = res.data;
+  showMsg("authMsg", "验证码已发送，请查收邮箱", "ok");
+}
+async function doOtpLogin() {
+  const token = $("otp-code").value.trim();
+  if (!pendingOtp) return showMsg("authMsg", "请先获取验证码");
+  if (!token) return showMsg("authMsg", "请输入验证码");
+  busy("otp-btn", true, "登录中…", "登录");
+  const done = await authCall(() => pendingOtp.verify({ token }));
+  busy("otp-btn", false, "", "登录");
+  if (done.error) return showMsg("authMsg", done.error.message || "验证码不正确或已过期");
+  pendingOtp = null;
+  await enterApp();
+}
+async function sendSignupCode() {
+  const email = $("su-email").value.trim();
+  if (!email) return showMsg("authMsg", "请先填写邮箱");
+  busy("su-send", true, "发送中…", "获取验证码");
+  const sent = await authCall(() => cloud.auth.sendOtp({ email }));
+  busy("su-send", false, "", "获取验证码");
+  if (sent.error) return showMsg("authMsg", sent.error.message || "验证码发送失败");
+  signupCtx = sent.data;
+  showMsg("authMsg", "验证码已发送，请查收邮箱", "ok");
+}
+async function doSignup() {
+  if (!signupCtx) return showMsg("authMsg", "请先获取验证码");
+  const email = $("su-email").value.trim(), token = $("su-code").value.trim(), password = $("su-pass").value;
+  if (!token) return showMsg("authMsg", "请输入邮箱验证码");
+  if (password.length < 6) return showMsg("authMsg", "密码至少 6 位");
+  if (signupCtx.isExistingUser) {
+    switchTab("pwd");
+    $("pwd-email").value = email;
+    showMsg("authMsg", "这个邮箱已经注册过了，请直接登录", "ok");
+    return;
+  }
+  busy("su-btn", true, "注册中…", "注册并登录");
+  const done = await authCall(() => cloud.auth.verifyOtp({
+    verificationId: signupCtx.verificationId, token: token, email: email,
+    isExistingUser: signupCtx.isExistingUser, password: password,
+  }));
+  busy("su-btn", false, "", "注册并登录");
+  if (done.error) return showMsg("authMsg", done.error.message || "注册失败，请重试");
+  signupCtx = null;
+  await enterApp();
+}
+async function sendResetCode() {
+  const email = $("rs-email").value.trim();
+  if (!email) return showMsg("authMsg", "请先填写邮箱");
+  busy("rs-send", true, "发送中…", "获取验证码");
+  const started = await authCall(() => cloud.auth.resetPasswordForEmail(email));
+  busy("rs-send", false, "", "获取验证码");
+  if (started.error) return showMsg("authMsg", started.error.message || "验证码发送失败");
+  resetCtx = started.data;
+  showMsg("authMsg", "验证码已发送，请查收邮箱", "ok");
+}
+async function doReset() {
+  if (!resetCtx) return showMsg("authMsg", "请先获取验证码");
+  const nonce = $("rs-code").value.trim(), password = $("rs-pass").value;
+  if (!nonce) return showMsg("authMsg", "请输入邮箱验证码");
+  if (password.length < 6) return showMsg("authMsg", "密码至少 6 位");
+  busy("rs-btn", true, "重置中…", "重置并登录");
+  const done = await authCall(() => resetCtx.updateUser({ nonce: nonce, password: password }));
+  busy("rs-btn", false, "", "重置并登录");
+  if (done.error) return showMsg("authMsg", done.error.message || "重置失败，请重试");
+  resetCtx = null;
+  await enterApp();
+}
+async function doSignOut() {
+  const result = await authCall(() => cloud.auth.signOut());
+  if (result.error) return showMsg("dataMsg", "退出未成功，请稍后重试。");
+  items = [];
+  switchTab("pwd");
+  hideMsg("authMsg");
+  showAuth();
+}
+
+/* ================= 启动 ================= */
+async function init() {
+  refreshCourseOptions();
+  showGreeting();
+  let session = null;
+  try { const r = await cloud.auth.getSession(); session = r.data; } catch (e) { session = null; }
+  if (!session) { showAuth(); return; }
+  await enterApp();
+}
+function showGreeting() {
+  const h = new Date().getHours();
+  const word = h < 6 ? "夜深了" : h < 11 ? "早上好" : h < 13 ? "中午好" : h < 18 ? "下午好" : "晚上好";
+  const d = new Date();
+  $("greet").textContent = word + "，同学";
+  $("greetSub").textContent = (d.getMonth() + 1) + " 月 " + d.getDate() + " 日 · 星期" + "日一二三四五六"[d.getDay()];
+}
+async function enterApp() {
+  const epoch = ++sessionEpoch;
+  hideMsg("authMsg");
+  $("pwd-pass").value = "";
+  showApp();
+  try {
+    const { data: user } = await cloud.auth.getUser();
+    const u = user && (user.user || user);
+    if (epoch !== sessionEpoch) return;
+    $("userEmail").textContent = (u && u.email) || "";
+  } catch (e) { if (epoch === sessionEpoch) $("userEmail").textContent = ""; }
+  if (epoch !== sessionEpoch) return;
+  await loadItems();
+}
+
+/* ================= 云端读写 ================= */
+function setSync(text, error = false) {
+  $("syncStatus").textContent = text;
+  $("syncStatus").classList.toggle("error", error);
+}
+async function loadItems(options = {}) {
+  if ($("appView").classList.contains("hidden")) return;
+  if (options.quiet && (loading || saving || pendingItems.size)) return;
+  const sequence = ++loadSequence;
+  loading = true;
+  $("refresh-btn").disabled = true;
+  setSync(navigator.onLine ? "正在同步…" : "网络已断开");
+  try {
+    const { data, error } = await cloud.database.from("homework")
+      .select("id, kind, course, title, due_date, due_time, status, note, location, created_at")
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .order("id", { ascending: true });
+    if (sequence !== loadSequence) return;
+    if (error) throw error;
+    items = data || [];
+    await loadTimetable();
+    if (sequence !== loadSequence) return;
+    loadedOnce = true;
+    hideMsg("dataMsg");
+    showGreeting();
+    const signature = JSON.stringify([items, timetable, items.map(bucketOf), dateKey(new Date())]);
+    if (signature !== renderSignature) {
+      renderSignature = signature;
+      render();
+    }
+    setSync("已同步 " + new Date().toLocaleTimeString("zh-CN", { hour:"2-digit", minute:"2-digit" }));
+  } catch (error) {
+    if (sequence !== loadSequence) return;
+    setSync(navigator.onLine ? "同步失败" : "网络已断开", true);
+    showMsg("dataMsg", loadedOnce ? "同步未成功，当前显示上次读取的记录。联网后可重新刷新。" : "暂时无法读取记录，请检查网络后重新刷新。");
+    if (!loadedOnce) $("list").innerHTML = '<div class="empty"><h3>暂时无法读取记录</h3><p>请稍后重试</p></div>';
+  } finally {
+    if (sequence === loadSequence) {
+      loading = false;
+      $("refresh-btn").disabled = false;
+    }
+  }
+}
+async function saveHw() {
+  if (saving) return;
+  const title = $("f-title").value.trim();
+  if (!title) return showMsg("modalMsg", "请填写内容");
+  if (view === "course" && !$("f-course").value.trim()) return showMsg("modalMsg", "请选择或填写课程名称");
+  if ($("f-time").value && !$("f-date").value) return showMsg("modalMsg", "设置时间时，请同时选择日期");
+  if (!navigator.onLine) return showMsg("modalMsg", "当前没有网络，内容尚未保存。请联网后再试。");
+  const epoch = sessionEpoch;
+  hideMsg("modalMsg");
+  const payload = {
+    kind: view,
+    course: view === "course" ? $("f-course").value.trim() : ($("f-label").value.trim() || "未分类"),
+    title: title,
+    due_date: $("f-date").value || null,
+    due_time: $("f-time").value ? $("f-time").value + ":00" : null,
+    status: $("f-status").value,
+    note: $("f-note").value.trim() || null,
+  };
+  if (view === "event") payload.location = $("f-location").value.trim() || null;
+  saving = true;
+  busy("save-btn", true, "保存中…", "保存");
+  try {
+    const query = cloud.database.from("homework");
+    const res = editingId !== null
+      ? await query.update(payload).eq("id", editingId).select()
+      : await query.insert(payload).select();
+    if (epoch !== sessionEpoch) return;
+    if (res.error) throw res.error;
+    if (!res.data || !res.data.length) throw new Error("记录未保存，可能已被删除或没有修改权限。");
+    saving = false;
+    closeModal();
+    await loadItems();
+  } catch (error) {
+    if (epoch === sessionEpoch) showMsg("modalMsg", error.message || "保存失败，输入内容已保留，请重试。");
+  } finally {
+    saving = false;
+    busy("save-btn", false, "", "保存");
+  }
+}
+async function mutateItem(id, action) {
+  const key = String(id);
+  if (pendingItems.has(key)) return;
+  const it = items.find(item => String(item.id) === key);
+  if (!it) return;
+  if (action === "delete" && !confirm("删除「" + it.title + "」？删除后无法恢复。")) return;
+  if (!navigator.onLine) return showMsg("dataMsg", "当前没有网络，改动尚未保存。请联网后再试。");
+  const epoch = sessionEpoch;
+  pendingItems.add(key);
+  render();
+  try {
+    const query = cloud.database.from("homework");
+    const res = action === "delete"
+      ? await query.delete().eq("id", id).select()
+      : await query.update({ status:it.status === "done" ? "todo" : "done" }).eq("id", id).select();
+    if (epoch !== sessionEpoch) return;
+    if (res.error) throw res.error;
+    if (!res.data || !res.data.length) throw new Error("记录可能已被删除或没有修改权限，请刷新后重试。");
+    await loadItems();
+  } catch (error) {
+    if (epoch === sessionEpoch) showMsg("dataMsg", error.message || "改动未保存，请稍后重试。");
+  } finally {
+    pendingItems.delete(key);
+    if (epoch === sessionEpoch) render();
+  }
+}
+function toggleDone(id) { return mutateItem(id, "toggle"); }
+function delHw(id) { return mutateItem(id, "delete"); }
+function onSearch() { keyword = $("search").value.trim().toLowerCase(); render(); }
+
+/* ================= 渲染 ================= */
+const STATUS_TXT = { todo: "未开始", doing: "进行中", done: "已完成" };
+const EVENT_STATUS_TXT = { todo: "待参加", doing: "进行中", done: "已结束" };
+const ICONS = {"check":"<!-- @license lucide-static v0.468.0 - ISC -->\n<svg\n  class=\"lucide lucide-check\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M20 6 9 17l-5-5\" />\n</svg>\n","square-pen":"<!-- @license lucide-static v0.468.0 - ISC -->\n<svg\n  class=\"lucide lucide-square-pen\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7\" />\n  <path d=\"M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z\" />\n</svg>\n","trash-2":"<!-- @license lucide-static v0.468.0 - ISC -->\n<svg\n  class=\"lucide lucide-trash-2\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M3 6h18\" />\n  <path d=\"M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6\" />\n  <path d=\"M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2\" />\n  <line x1=\"10\" x2=\"10\" y1=\"11\" y2=\"17\" />\n  <line x1=\"14\" x2=\"14\" y1=\"11\" y2=\"17\" />\n</svg>\n","undo-2":"<!-- @license lucide-static v0.468.0 - ISC -->\n<svg\n  class=\"lucide lucide-undo-2\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M9 14 4 9l5-5\" />\n  <path d=\"M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11\" />\n</svg>\n","refresh-cw":"<!-- @license lucide-static v0.468.0 - ISC -->\n<svg\n  class=\"lucide lucide-refresh-cw\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\" />\n  <path d=\"M21 3v5h-5\" />\n  <path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\" />\n  <path d=\"M8 16H3v5\" />\n</svg>\n"};
+function actionButton(action, id, icon, title, extraClass = "") {
+  return '<button class="icon-btn ' + extraClass + '" title="' + title + '" aria-label="' + title + '" data-act="' + action + '" data-id="' + esc(id) + '"' + (pendingItems.has(String(id)) ? " disabled" : "") + '>' + ICONS[icon] + '</button>';
+}
+$('refresh-btn').innerHTML = ICONS['refresh-cw'];
+
+function dueText(it) {
+  if (!it.due_date) return it.kind === "event" ? "日期待定" : "未设截止";
+  const date = it.due_date.startsWith(String(new Date().getFullYear())) ? it.due_date.slice(5) : it.due_date;
+  const t = date.replaceAll("-", "/") + (it.due_time ? " " + it.due_time.slice(0, 5) : "");
+  if (it.status === "done") return t;
+  const diff = dueTs(it) - Date.now();
+  const days = dayOffset(it.due_date);
+  if (diff < 0) return t + (it.kind === "event" ? " · 时间已过" : " · 已逾期");
+  if (days === 0) return t + " · 今天";
+  if (days === 1) return t + " · 明天";
+  if (days <= 8) return t + " · 还有 " + days + " 天";
+  return t;
+}
+function dueClass(it) {
+  if (it.status === "done" || !it.due_date) return "ok";
+  const diff = dueTs(it) - Date.now();
+  if (diff < 0) return "late";
+  if (diff < 86400000 * 2) return "soon";
+  return "ok";
+}
+function renderDeadlineReminder(base) {
+  const box = $("deadlineReminder");
+  const now = Date.now();
+  const upcoming = view === "course" || view === "event" ? base.filter(it =>
+    it.status !== "done" && it.due_date && dayOffset(it.due_date) >= 0 &&
+    dayOffset(it.due_date) <= 3 && dueTs(it) >= now
+  ).sort((a, b) => dueTs(a) - dueTs(b)) : [];
+  if (!upcoming.length) {
+    box.classList.add("hidden");
+    box.innerHTML = "";
+    return;
+  }
+  box.classList.remove("hidden");
+  box.innerHTML = '<div class="deadline-reminder-title">' + (view === "event" ? "三天内日程<span>" + upcoming.length + " 项安排" : "三天内截止<span>" + upcoming.length + " 项未完成作业") + "</span></div>" +
+    '<div class="deadline-reminder-list">' + upcoming.map(it => {
+      const remaining = dayOffset(it.due_date);
+      const deadline = remaining === 0 ? "今天" : remaining === 1 ? "明天" : remaining + " 天后";
+      return '<button class="deadline-reminder-item" type="button" data-reminder-id="' + esc(it.id) + '">' +
+        '<span>' + esc(it.course) + '</span><strong>' + esc(it.title) + '</strong><span>' + deadline +
+        (it.due_time ? " " + esc(it.due_time.slice(0, 5)) : "") + "</span></button>";
+    }).join("") + "</div>";
+}
+function bucketOf(it) {
+  if (it.status === "done") return "done";
+  if (!it.due_date) return "nodate";
+  const ts = dueTs(it), days = dayOffset(it.due_date);
+  if (ts < Date.now()) return "late";
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  if (days < 8) return "week";
+  return "later";
+}
+const BUCKETS = [
+  { key: "late", title: "已逾期", cls: "late" },
+  { key: "today", title: "今天到期", cls: "soon" },
+  { key: "tomorrow", title: "明天到期", cls: "soon" },
+  { key: "week", title: "未来 7 天", cls: "" },
+  { key: "later", title: "以后", cls: "" },
+  { key: "nodate", title: "未设截止", cls: "" },
+  { key: "done", title: "已完成", cls: "" },
+];
+const EVENT_BUCKET_TITLES = {late:"时间已过 · 未结束",today:"今天",tomorrow:"明天",nodate:"日期待定",done:"已结束"};
+
+function render() {
+  refreshCourseOptions();
+  if (view === "timetable") { renderTimetable(); return; }
+  const base = items.filter(i => (i.kind || "course") === view);
+
+  let labels = view === "course"
+    ? ownCourseNames()
+    : Array.from(new Set(base.map(i => i.course).filter(Boolean)));
+  if (filter !== "all" && labels.indexOf(filter) === -1) filter = "all";
+
+  const chips = ['<button class="chip ' + (filter === "all" ? "active" : "") + '" data-label="all">全部</button>'];
+  labels.forEach(name => {
+    const n = base.filter(i => i.course === name && i.status !== "done").length;
+    chips.push('<button class="chip ' + (filter === name ? "active" : "") + '" data-label="' + esc(name) + '">' + esc(name) + (n ? " " + n : "") + "</button>");
+  });
+  const scrollLeft = $("filters").scrollLeft;
+  $("filters").innerHTML = chips.join("");
+  $("filters").scrollLeft = scrollLeft;
+
+  let list = base;
+  if (filter !== "all") list = list.filter(i => i.course === filter);
+  const status = $("statusFilter").value;
+  if (status !== "all") list = list.filter(i => status === "open" ? i.status !== "done" : i.status === status);
+  if (keyword) list = list.filter(i =>
+    (i.title || "").toLowerCase().indexOf(keyword) > -1 ||
+    (i.course || "").toLowerCase().indexOf(keyword) > -1 ||
+    (i.location || "").toLowerCase().indexOf(keyword) > -1 ||
+    (i.note || "").toLowerCase().indexOf(keyword) > -1
+  );
+
+  const undone = base.filter(i => i.status !== "done");
+  const urgent = undone.filter(i => i.due_date && dueTs(i) < startOfToday() + 86400000).length;
+  $("stat-todo").textContent = undone.length;
+  $("stat-soon").textContent = urgent;
+  $("stat-done").textContent = base.filter(i => i.status === "done").length;
+  renderDeadlineReminder(base);
+
+  const el = $("list");
+  if (!list.length) {
+    const narrowed = keyword || filter !== "all" || status !== "all";
+    el.innerHTML = '<div class="empty"><div class="icon">' + (keyword ? "🔍" : view === "course" ? "📚" : "🧭") + "</div><h3>" +
+      (narrowed ? "没有找到匹配的记录" : view === "event" ? "暂无日程" : view === "course" ? "还没有作业记录" : "还没有探索记录") + "</h3><p>" +
+      (narrowed ? (keyword ? "换个关键词试试" : "当前筛选条件下暂无记录") : "") +
+      "</p></div>";
+    return;
+  }
+
+  const groups = BUCKETS.map(b => ({ b: b, list: list.filter(i => bucketOf(i) === b.key) })).filter(g => g.list.length);
+  el.innerHTML = groups.map(g => {
+    const rows = g.list.slice().sort((a, b) => dueTs(a) - dueTs(b)).map(it => {
+      const c = courseOf(it.course);
+      return '<div class="hw ' + (it.status === "done" ? "done" : "") + '" style="--bar:' + c.color + '">' +
+        '<div class="hw-main">' +
+          '<div class="hw-title">' + esc(it.title) + "</div>" +
+          '<div class="hw-meta">' +
+            '<span class="course-tag">' + esc(it.course) + "</span>" +
+            '<span class="due ' + dueClass(it) + '">' + esc(dueText(it)) + "</span>" +
+            '<span>' + (it.kind === "event" ? EVENT_STATUS_TXT : STATUS_TXT)[it.status] + "</span>" +
+            (it.kind === "event" && it.location ? '<span>地点：' + esc(it.location) + '</span>' : '') +
+          "</div>" +
+          (it.note ? '<div class="hw-note">' + esc(it.note) + "</div>" : "") +
+        "</div>" +
+        '<div class="hw-actions">' +
+          actionButton("done", it.id, it.status === "done" ? "undo-2" : "check", it.kind === "event" ? (it.status === "done" ? "恢复待参加" : "标记已结束") : it.status === "done" ? "撤回完成" : "标记完成", "done-btn") +
+          actionButton("edit", it.id, "square-pen", "编辑") +
+          actionButton("del", it.id, "trash-2", "删除", "del-btn") +
+        "</div></div>";
+    }).join("");
+    return '<div class="group"><div class="group-head ' + g.b.cls + '">' + (view === "event" && EVENT_BUCKET_TITLES[g.b.key] || g.b.title) +
+      '<span class="count">' + g.list.length + "</span></div><div class=\"hw-list\">" + rows + "</div></div>";
+  }).join("");
+}
+
+/* 事件委托：筛选标签 / 卡片按钮 */
+$("filters").addEventListener("click", function (e) {
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  const label = chip.getAttribute("data-label");
+  filter = label === "all" ? "all" : label;
+  render();
+});
+$("list").addEventListener("click", function (e) {
+  const btn = e.target.closest(".icon-btn");
+  if (!btn) return;
+  const id = btn.getAttribute("data-id");
+  const act = btn.getAttribute("data-act");
+  if (act === "done") toggleDone(id);
+  else if (act === "edit") editHw(id);
+  else if (act === "del") delHw(id);
+});
+$("deadlineReminder").addEventListener("click", function (e) {
+  const item = e.target.closest("[data-reminder-id]");
+  if (item) editHw(item.getAttribute("data-reminder-id"));
+});
+
+/* ================= 弹窗 ================= */
+function openModal(id) { editHw(id); }
+function editHw(id) {
+  if (saving || view === "timetable") return;
+  returnFocus = document.activeElement;
+  editingId = id == null ? null : id;
+  hideMsg("modalMsg");
+  const isExplore = view === "explore", isEvent = view === "event";
+  $("row-course").classList.toggle("hidden", view !== "course");
+  $("row-label").classList.toggle("hidden", view === "course");
+  $("row-location").classList.toggle("hidden", !isEvent);
+  $("f-label-lbl").textContent = isEvent ? "活动分类（可选）" : "方向 / 领域";
+  $("f-label").placeholder = isEvent ? "例：见面会、讲座、社团活动" : "例：Rust 入门、摄影构图、AIGC 工具";
+  $("f-title-lbl").textContent = isEvent ? "活动名称" : isExplore ? "想了解什么" : "作业内容";
+  $("f-title").placeholder = isEvent ? "例：朋导见面会" : isExplore ? "例：搞懂 CORS 到底是怎么回事" : "例：完成第三章习题 1-10 题";
+  $("lbl-date").textContent = isEvent ? "活动日期（可选）" : isExplore ? "计划完成（可选）" : "截止日期";
+  $("lbl-time").textContent = isEvent ? "开始时间（可选）" : "截止时间（可选）";
+  $("f-status").innerHTML = Object.entries(isEvent ? EVENT_STATUS_TXT : STATUS_TXT).map(([key,label]) => '<option value="'+key+'">'+label+'</option>').join("");
+  $("f-note").placeholder = isEvent ? "例：携带材料、联系人、注意事项" : "例：提交到学习通，需要带草稿纸";
+  $("modal-title").textContent = id
+    ? (isEvent ? "编辑日程" : isExplore ? "编辑探索项" : "编辑作业")
+    : (isEvent ? "记一条日程" : isExplore ? "记一条探索" : "记一条作业");
+  $("labelList").innerHTML = Array.from(new Set(
+    items.filter(i => (i.kind || "course") === view).map(i => i.course).filter(Boolean)
+  )).map(n => '<option value="' + esc(n) + '"></option>').join("");
+  if (id) {
+    const it = items.find(i => String(i.id) === String(id));
+    if (!it) return;
+    $("f-course").value = it.course;
+    $("f-label").value = it.course;
+    $("f-title").value = it.title;
+    $("f-date").value = it.due_date || "";
+    $("f-time").value = it.due_time ? it.due_time.slice(0, 5) : "";
+    $("f-status").value = it.status;
+    $("f-note").value = it.note || "";
+    $("f-location").value = it.location || "";
+  } else {
+    $("f-course").value = ownCourseNames()[0] || "";
+    $("f-title").value = "";
+    $("f-label").value = "";
+    $("f-date").value = "";
+    $("f-time").value = "";
+    $("f-status").value = "todo";
+    $("f-note").value = "";
+    $("f-location").value = "";
+  }
+  $("overlay").classList.add("show");
+  document.body.classList.add("modal-open");
+  $("f-title").focus();
+}
+function closeModal() {
+  if (saving || !$("overlay").classList.contains("show")) return;
+  $("overlay").classList.remove("show");
+  document.body.classList.remove("modal-open");
+  if (returnFocus && returnFocus.isConnected) returnFocus.focus();
+  else $(window.matchMedia("(max-width: 640px)").matches ? "fab" : "desktop-add").focus();
+}
+$("overlay").addEventListener("click", e => { if (e.target === e.currentTarget) closeModal(); });
+document.addEventListener("keydown", function (e) {
+  if (!$("overlay").classList.contains("show")) return;
+  if (e.key === "Escape") closeModal();
+  if (e.key === "Tab") {
+    const controls = [...$("overlay").querySelectorAll("input,select,textarea,button")].filter(el => !el.disabled && el.getClientRects().length);
+    const first = controls[0], last = controls[controls.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+});
+/* ================= Personal timetable ================= */
+function parseWeeks(text) {
+  const value = String(text || "").replace(/[，、]/g, ",").replace(/[–—~～]/g, "-").replace(/周/g, "").replace(/\s/g, "");
+  if (!value) throw new Error("请填写每门课已核实的周次");
+  const result = new Set();
+  for (const part of value.split(",")) {
+    const m = part.match(/^(\d{1,2})(?:-(\d{1,2}))?([单双])?$/);
+    if (!m) throw new Error("周次格式不正确，请用 8、5-16 或 1-17单 等格式");
+    const first = +m[1], last = +(m[2] || m[1]);
+    if (first < 1 || last > 30 || first > last) throw new Error("周次需在 1–30 之间，起始周不晚于结束周");
+    for (let n = first; n <= last; n++) if (!m[3] || n % 2 === (m[3] === "单" ? 1 : 0)) result.add(n);
+  }
+  if (!result.size) throw new Error("周次范围内没有符合单双周的周次");
+  return [...result].sort((a,b) => a-b);
+}
+function validTimetableDocument(doc) {
+  if (!doc || doc.version !== 1 || typeof doc.term !== "string" || doc.term.length > 80 || !Array.isArray(doc.periods) || doc.periods.length !== 12 || !Array.isArray(doc.sessions) || doc.sessions.length > 300) return false;
+  if (doc.courses !== undefined && (!Array.isArray(doc.courses) || doc.courses.length > 300 || !doc.courses.every(n => typeof n === "string" && n.trim() && n.length <= 200))) return false;
+  let previousEnd = "00:00";
+  for (const p of doc.periods) {
+    if (!Array.isArray(p) || p.length !== 2 || !p.every(v => /^([01]\d|2[0-3]):[0-5]\d$/.test(v)) || p[0] >= p[1] || p[0] < previousEnd) return false;
+    previousEnd = p[1];
+  }
+  return doc.sessions.every(s => s && typeof s.name === "string" && s.name.trim() && s.name.length <= 200 && typeof s.location === "string" && s.location.length <= 200 && Number.isInteger(s.day) && s.day >= 1 && s.day <= 7 && Number.isInteger(s.start) && Number.isInteger(s.end) && s.start >= 1 && s.end <= 12 && s.start <= s.end && Array.isArray(s.weeks) && s.weeks.length && s.weeks.every(w => Number.isInteger(w) && w >= 1 && w <= 30));
+}
+async function loadTimetable() {
+  if (ttDraft || ttSaving) return;
+  const epoch = sessionEpoch, sequence = ++ttLoadSequence;
+  try {
+    const {data,error} = await cloud.database.from("timetables").select("id, document, revision");
+    if (epoch !== sessionEpoch || sequence !== ttLoadSequence || ttDraft) return;
+    if (error) throw error;
+    const row = data && data[0];
+    if (row && !validTimetableDocument(row.document)) throw new Error("课表数据格式不正确");
+    timetableRow = row || null;
+    timetable = row ? row.document : null;
+    ttLoadOK = true;
+    hideMsg("tt-load-msg");
+    refreshCourseOptions();
+    if (view === "timetable") renderTimetable();
+  } catch (error) {
+    if (epoch === sessionEpoch && sequence === ttLoadSequence) {
+      ttLoadOK = false;
+      showMsg("tt-load-msg", "课表同步失败，已有显示不变。请联网后刷新；首次上线需先启用课表云端表。");
+    }
+  }
+}
+function lessonColor(name) {
+  const colors = ["#e6f4ef", "#f0eafa", "#ffecee", "#e7f0fe", "#fff4d6", "#edf5df"];
+  let hash = 0; for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) >>> 0;
+  return colors[hash % colors.length];
+}
+function renderTimetable() {
+  if (ttDraft) return;
+  const display = $("tt-display");
+  if (!timetable) {
+    display.innerHTML = '<div class="empty"><h3>还没有自己的课表</h3><button class="btn ghost" style="margin-top:16px" onclick="openTimetableEditor(\'edit\')">手动添加</button></div>';
+    return;
+  }
+  const sessions = timetable.sessions || [];
+  const courses = timetable.courses || [];
+  const weeks = [...new Set(sessions.flatMap(s => s.weeks))].sort((a,b) => a-b);
+  let html = '<div class="tt-meta">' + esc(timetable.term || "学期未填写") + ' · ' + (sessions.length ? '已确认 ' + new Set(sessions.map(s => s.name)).size + ' 门课' : '周课表');
+  if (sessions.length) {
+    if (!Number.isInteger(ttSelectedWeek) || ttSelectedWeek < 1 || ttSelectedWeek > 30) ttSelectedWeek = weeks[0];
+    html += '</div><div class="field"><label for="tt-week-view">查看周次</label><select id="tt-week-view" onchange="ttSelectedWeek=+this.value;renderTimetable()">' + Array.from({length:30},(_,i) => '<option value="'+(i+1)+'"'+(ttSelectedWeek===i+1?' selected':'')+'>第 '+(i+1)+' 周'+(weeks.includes(i+1)?'':' · 未录入课程')+'</option>').join("") + '</select></div>';
+  } else {
+    html += '</div><div class="tt-unplaced"><div><strong>课程安排尚未录入</strong><p>课程名称已保留，但缺少星期、节次或周次，暂时无法放入具体格子。导入截图或校正后，课表会显示在下方。</p></div>' +
+      (courses.length ? '<details><summary>课程名单 · '+courses.length+' 门</summary><ul>'+courses.map(name => '<li>'+esc(name)+'</li>').join('')+'</ul></details>' : '') + '</div>';
+  }
+  const selectedWeek = sessions.length ? ttSelectedWeek : null;
+  const lessons = selectedWeek ? sessions.filter(s => s.weeks.includes(selectedWeek)) : [];
+  if (sessions.length && !lessons.length) html += '<p class="tt-note">该周暂无已录入课程，不代表这周没有课。</p>';
+  html += '<div class="tt-scroll"><div class="tt-grid"><div class="tt-cell" style="grid-area:1/1">节次</div>' + TT_DAYS.map((d,i) => '<div class="tt-cell" style="grid-area:1/'+(i+2)+'">'+d+'</div>').join("");
+  timetable.periods.forEach((p,i) => {
+    html += '<div class="tt-cell" style="grid-area:'+(i+2)+'/1">第 '+(i+1)+' 节<small>'+p[0]+'<br>'+p[1]+'</small></div>';
+    for (let d = 1; d <= 7; d++) html += '<div class="tt-cell" style="grid-area:'+(i+2)+'/'+(d+1)+'"></div>';
+  });
+  for (const s of lessons) html += '<button class="tt-lesson" data-tt-edit="'+timetable.sessions.indexOf(s)+'" style="grid-column:'+(s.day+1)+';grid-row:'+(s.start+1)+' / '+(s.end+2)+';background:'+lessonColor(s.name)+'" title="校正 '+esc(s.name)+'" aria-label="'+esc(s.name)+'，'+TT_DAYS[s.day-1]+'，第'+s.start+'至'+s.end+'节，点击校正"><strong>'+esc(s.name)+'</strong><small>'+esc(s.location || "教室未填写")+'</small></button>';
+  display.innerHTML = html + '</div></div>' + (sessions.length ? '<p class="tt-note">只显示已确认周次的课程。截图中的单周不自动扩展为整学期。</p>' : '');
+}
+function periodSelect(selected) { return Array.from({length:12},(_,i) => '<option value="'+(i+1)+'"'+(+selected===i+1?' selected':'')+'>第 '+(i+1)+' 节</option>').join(""); }
+function daySelect(selected) { return TT_DAYS.map((d,i) => '<option value="'+(i+1)+'"'+(+selected===i+1?' selected':'')+'>'+d+'</option>').join(""); }
+function openTimetableEditor(mode) {
+  if (ttSaving || ttDraft) return;
+  if (!ttLoadOK) return showMsg("tt-load-msg", "请先完成课表云端读取，再开始校正或导入。可点击上方刷新按钮重试。");
+  ttLoadSequence++;
+  ttDraft = {term: timetable ? timetable.term : "", periods: structuredClone(timetable ? timetable.periods : TT_PERIODS), sessions:mode === "edit" && timetable ? timetable.sessions.map(s => ({...s,weeksText:s.weeks.join(","),confirmed:true,raw:""})) : []};
+  ttImage = null;
+  $("tt-preview").width = 1;
+  $("tt-file").value = "";
+  $("tt-image-mode").value = "grid";
+  $("tt-image-tools").classList.add("hidden");
+  $("tt-grid-tools").classList.remove("hidden");
+  $("tt-locate").classList.remove("hidden");
+  $("tt-source-week").value = "";
+  $("tt-term").value = ttDraft.term;
+  $("tt-save-mode").value = mode === "edit" ? "replace" : "merge";
+  $("tt-editor-title").textContent = mode === "edit" ? "校正课表" : "导入课表";
+  $("tt-image-section").classList.toggle("hidden", mode === "edit");
+  $("tt-first-day").innerHTML = daySelect(1);
+  $("tt-last-day").innerHTML = daySelect(7);
+  $("tt-first-period").innerHTML = periodSelect(1);
+  $("tt-last-period").innerHTML = periodSelect(12);
+  $("tt-periods").innerHTML = ttDraft.periods.map((p,i) => '<div class="tt-period-line"><span>第'+(i+1)+'节</span><input type="time" aria-label="第'+(i+1)+'节开始" data-period="'+i+'" data-end="0" value="'+p[0]+'"><span>至</span><input type="time" aria-label="第'+(i+1)+'节结束" data-period="'+i+'" data-end="1" value="'+p[1]+'"></div>').join("");
+  hideMsg("tt-msg");
+  $("tt-editor").classList.remove("hidden");
+  $("tt-view").classList.add("hidden");
+  renderTimetableReview();
+  $("tt-term").focus();
+}
+function closeTimetableEditor(force = false) {
+  if (ttSaving) return false;
+  if (!force && ttDraft && !confirm("离开会丢弃尚未保存的课表改动，确定离开？")) return false;
+  cancelTimetableOcr();
+  ttDraft = null; ttImage = null;
+  $("tt-review").innerHTML = "";
+  $("tt-file").value = "";
+  $("tt-preview").width = 1;
+  $("tt-editor").classList.add("hidden");
+  updateViewButtons();
+  renderTimetable();
+  return true;
+}
+function renderTimetableReview() {
+  if (!ttDraft) return;
+  $("tt-review-title").textContent = "待校正课程 · " + ttDraft.sessions.length + " 个上课安排";
+  $("tt-review").innerHTML = ttDraft.sessions.map((s,i) => '<article class="tt-review" data-lesson="'+i+'"><div class="tt-review-head"><strong>'+ (i+1) + ' · '+esc(s.name || "名称待填写")+'</strong><button type="button" class="icon-btn" data-remove="'+i+'" title="删除这条安排" aria-label="删除这条安排">'+ICONS['trash-2']+'</button></div><div class="field"><label for="tt-name-'+i+'">完整课程名称</label><input id="tt-name-'+i+'" data-key="name" maxlength="200" value="'+esc(s.name)+'" placeholder="请补齐被省略的名称"></div><div class="tt-row"><div class="field"><label for="tt-day-'+i+'">星期</label><select id="tt-day-'+i+'" data-key="day"><option value="">待填写</option>'+daySelect(s.day)+'</select></div><div class="field"><label for="tt-location-'+i+'">教室（可留空）</label><input id="tt-location-'+i+'" data-key="location" maxlength="200" value="'+esc(s.location)+'"></div><div class="field"><label for="tt-start-'+i+'">开始节次</label><select id="tt-start-'+i+'" data-key="start"><option value="">待填写</option>'+periodSelect(s.start)+'</select></div><div class="field"><label for="tt-end-'+i+'">结束节次</label><select id="tt-end-'+i+'" data-key="end"><option value="">待填写</option>'+periodSelect(s.end)+'</select></div></div><div class="field"><label for="tt-weeks-'+i+'">已核实周次</label><input id="tt-weeks-'+i+'" data-key="weeksText" value="'+esc(s.weeksText || "")+'" placeholder="例：8 或 5-16"></div>'+(s.raw?'<details><summary class="tt-note">识别原文</summary><p class="tt-note" style="white-space:pre-wrap">'+esc(s.raw)+'</p></details>':'')+'<label class="tt-check"><input type="checkbox" data-key="confirmed"'+(s.confirmed?' checked':'')+'>已逐项核对名称、星期、节次、周次及教室</label></article>').join("");
+  // A missing select value stays visibly missing instead of defaulting to Monday / period 1.
+  ttDraft.sessions.forEach((s,i) => ["day","start","end"].forEach(key => $("tt-"+key+"-"+i).value = s[key] || ""));
+}
+function addTimetableLesson() {
+  if (!ttDraft || ttOcrBusy || ttSaving) return;
+  if (ttDraft.sessions.length >= 300) return showMsg("tt-msg", "最多 300 个上课安排，请分学期保存");
+  ttDraft.sessions.push({name:"",location:"",day:null,start:null,end:null,weeksText:"",confirmed:false,raw:""});
+  renderTimetableReview();
+  $("tt-name-"+(ttDraft.sessions.length-1)).focus();
+}
+$("tt-review").addEventListener("input", e => {
+  if (!ttDraft || ttSaving || ttOcrBusy) return;
+  const article = e.target.closest("[data-lesson]"), key = e.target.dataset.key;
+  if (!article || !key) return;
+  const s = ttDraft.sessions[+article.dataset.lesson];
+  s[key] = key === "confirmed" ? e.target.checked : ["day","start","end"].includes(key) ? (+e.target.value || null) : e.target.value;
+  if (key !== "confirmed") { s.confirmed = false; article.querySelector('[data-key="confirmed"]').checked = false; }
+});
+$("tt-review").addEventListener("click", e => {
+  const button = e.target.closest("[data-remove]");
+  if (button && ttDraft && !ttSaving && !ttOcrBusy) { ttDraft.sessions.splice(+button.dataset.remove,1); renderTimetableReview(); }
+});
+$("tt-periods").addEventListener("input", e => {
+  if (ttDraft && e.target.dataset.period !== undefined) ttDraft.periods[+e.target.dataset.period][+e.target.dataset.end] = e.target.value;
+});
+$("tt-display").addEventListener("click", e => {
+  const button = e.target.closest("[data-tt-edit]");
+  if (button) { openTimetableEditor("edit"); const input = $("tt-name-"+button.dataset.ttEdit); if (input) { input.scrollIntoView({block:"center"}); input.focus(); } }
+});
+function mergeTimetableSessions(existing, incoming) {
+  const result = structuredClone(existing);
+  for (const lesson of incoming) {
+    const match = result.find(s => s.name === lesson.name && s.location === lesson.location && s.day === lesson.day && s.start === lesson.start && s.end === lesson.end);
+    if (match) match.weeks = [...new Set(match.weeks.concat(lesson.weeks))].sort((a,b) => a-b);
+    else result.push(lesson);
+  }
+  return result;
+}
+function timetableConflicts(sessions) {
+  for (let i = 0; i < sessions.length; i++) for (let j = i+1; j < sessions.length; j++) {
+    const a = sessions[i], b = sessions[j];
+    if (a.day === b.day && a.start <= b.end && b.start <= a.end && a.weeks.some(w => b.weeks.includes(w))) return "第 " + a.weeks.find(w => b.weeks.includes(w)) + " 周" + TT_DAYS[a.day-1] + "存在重叠课程：「"+a.name+"」与「"+b.name+"」。请校正星期、节次或周次。";
+  }
+  return "";
+}
+async function saveTimetable() {
+  if (!ttDraft || ttSaving || ttOcrBusy) return;
+  hideMsg("tt-msg");
+  let document;
+  try {
+    if (!ttLoadOK) throw new Error("云端课表尚未成功读取，暂不保存，以免覆盖其他设备的数据。请先返回并刷新。");
+    if (!navigator.onLine) throw new Error("当前离线，课表尚未保存。请联网后重试。");
+    if (ttDraft.sessions.some(s => !s.confirmed)) throw new Error("请逐项校正，并勾选每条课程的核对确认");
+    const incoming = ttDraft.sessions.map(s => {
+      if (/…|\.\.\./.test(s.name)) throw new Error("课程名称含省略号，请补齐完整名称");
+      return {name:s.name.trim(),location:s.location.trim(),day:s.day,start:s.start,end:s.end,weeks:parseWeeks(s.weeksText)};
+    });
+    const term = $("tt-term").value.trim();
+    if (!term) throw new Error("请填写学期，不确定时先不要保存");
+    const merge = $("tt-save-mode").value === "merge";
+    if (merge && timetable && timetable.sessions.length && timetable.term !== term) throw new Error("学期与现有课表不同，请切换为替换整张课表，或改为相同学期");
+    if (merge && timetable && timetable.sessions.length && JSON.stringify(timetable.periods) !== JSON.stringify(ttDraft.periods)) throw new Error("课时钟点与现有课表不同。请统一时间后合并，或替换整张课表");
+    document = {version:1,term,periods:structuredClone(ttDraft.periods),sessions:merge && timetable ? mergeTimetableSessions(timetable.sessions,incoming) : incoming};
+    if (timetable && timetable.courses) document.courses = [...timetable.courses];
+    if (!validTimetableDocument(document)) throw new Error("请检查完整课程名、星期、节次及 12 节的起止时间；不允许缺失或倒序");
+    const conflict = timetableConflicts(document.sessions); if (conflict) throw new Error(conflict);
+    if (!merge && timetable && !confirm("确认用当前校正结果替换整张课表？已有作业不会删除。")) return;
+  } catch (e) { showMsg("tt-msg", e.message); $("tt-msg").scrollIntoView({block:"center"}); return; }
+  const epoch = sessionEpoch, revision = timetableRow ? timetableRow.revision : 0;
+  ttSaving = true;
+  busy("tt-save",true,"保存中…","确认并保存");
+  try {
+    const q = cloud.database.from("timetables");
+    // Compare revisions so another device's changes cannot be silently overwritten.
+    const result = timetableRow
+      ? await q.update({document,revision:revision+1}).eq("id",timetableRow.id).eq("revision",revision).select()
+      : await q.insert({document,revision:1}).select();
+    if (epoch !== sessionEpoch) return;
+    if (result.error) throw new Error("云端未保存，请检查网络。若其他设备已更新课表，先导出待保存内容，再返回刷新。");
+    if (!result.data || result.data.length !== 1) throw new Error("课表已被其他设备修改。本次未覆盖，请先导出待保存内容，再返回刷新。");
+    timetableRow = result.data[0]; timetable = document;
+    ttSelectedWeek = +( $("tt-source-week").value) || (document.sessions[0] && document.sessions[0].weeks[0]) || 1;
+    ttSaving = false;
+    closeTimetableEditor(true);
+    refreshCourseOptions(); renderSignature = "";
+    showMsg("tt-load-msg", "课表已保存到当前账号，已有作业保留不变", "ok");
+  } catch (e) { if (epoch === sessionEpoch) showMsg("tt-msg", e.message || "保存失败，校正内容仍保留在此页面"); }
+  finally { ttSaving = false; busy("tt-save",false,"","确认并保存"); }
+}
+
+/* ================= Local screenshot OCR ================= */
+function exportTimetableDraft() {
+  if (!ttDraft) return;
+  const blob = new Blob([JSON.stringify({...ttDraft,term:$("tt-term").value},null,2)],{type:"application/json"});
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = "timetable-draft.json"; a.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
+}
+function setOcrBusy(value) {
+  ttOcrBusy = value;
+  $("tt-editor").setAttribute("aria-busy",String(value));
+  $("tt-editor").querySelectorAll(".tt-edit-control input,.tt-edit-control select,.tt-edit-control button").forEach(el => el.disabled = value);
+  $("tt-progress").classList.toggle("hidden",!value);
+  $("tt-save").disabled = value;
+}
+function cancelTimetableOcr() {
+  ttOcrRun++;
+  if (ttWorker) { ttWorker.terminate().catch(() => {}); ttWorker = null; }
+  setOcrBusy(false);
+}
+function ocrProgress(text, progress) {
+  $("tt-progress-text").textContent = text;
+  $("tt-progress-bar").value = Math.max(0,Math.min(1,progress));
+}
+async function createTimetableWorker(run) {
+  if (!window.Tesseract) await new Promise((resolve,reject) => {
+    const script = document.createElement("script"); script.src = "ocr/tesseract.min.js";
+    script.onload = resolve; script.onerror = () => { script.remove(); reject(new Error("本机识别组件加载失败，请检查网络后重试")); }; document.head.append(script);
+  });
+  if (run !== ttOcrRun) throw new Error("识别已取消");
+  ocrProgress("正在加载中文识别模型…",0);
+  const base = new URL("ocr/",location.href);
+  const worker = await Tesseract.createWorker(["chi_sim","eng"],1,{
+    workerPath:new URL("worker.min.js",base).href, corePath:new URL("core/",base).href,
+    langPath:new URL("lang",base).href, cachePath:"timetable-lstm-v1", workerBlobURL:false,
+    logger: m => { if (run === ttOcrRun && m.status !== "recognizing text") ocrProgress("正在准备本机识别…",m.progress || 0); }
+  });
+  if (run !== ttOcrRun) { await worker.terminate(); throw new Error("识别已取消"); }
+  ttWorker = worker;
+  await worker.setParameters({user_defined_dpi:"300",preserve_interword_spaces:"1"});
+  return worker;
+}
+async function loadTimetableImage(file) {
+  if (!file || !ttDraft || ttOcrBusy || ttSaving) return;
+  hideMsg("tt-msg");
+  if (!/^image\/(png|jpeg|webp)$/.test(file.type) || file.size > 20*1024*1024) return showMsg("tt-msg","请选择不超过 20 MB 的 PNG、JPG 或 WebP 截图");
+  const epoch = sessionEpoch, draft = ttDraft;
+  const url = URL.createObjectURL(file), image = new Image();
+  try {
+    image.src = url; await image.decode();
+    if (epoch !== sessionEpoch || draft !== ttDraft) return;
+    if (image.width * image.height > 32000000 || image.width < 200 || image.height < 200) throw new Error("图片尺寸不适合识别，请使用清晰的常规截图");
+    // Limit the canvas working set on iPhones; larger uploads retain their aspect ratio.
+    const scale = Math.min(1,2400/image.height,1600/image.width);
+    ttImage = document.createElement("canvas"); ttImage.width = Math.round(image.width*scale); ttImage.height = Math.round(image.height*scale);
+    ttImage.getContext("2d").drawImage(image,0,0,ttImage.width,ttImage.height);
+    $("tt-image-tools").classList.remove("hidden");
+    ["left","top","right","bottom"].forEach((key,i) => $("tt-"+key).value = [15,20,99,96][i]);
+    $("tt-grid-confirm").checked = false;
+    drawTimetablePreview();
+    if ($("tt-image-mode").value === "grid") await locateTimetableGrid();
+    else changeImageMode();
+  } catch (e) { if (epoch === sessionEpoch && draft === ttDraft) showMsg("tt-msg",e.message || "无法打开截图，请换成 PNG 或 JPG"); }
+  finally { URL.revokeObjectURL(url); }
+}
+function changeImageMode() {
+  const grid = $("tt-image-mode").value === "grid";
+  $("tt-grid-tools").classList.toggle("hidden",!grid);
+  $("tt-locate").classList.toggle("hidden",!grid);
+  if (!grid && ttImage) {
+    const bounds = detailImageBounds();
+    ["left","top","right","bottom"].forEach((key,i) => $("tt-"+key).value = bounds[i]);
+  }
+  drawTimetablePreview(true);
+}
+function timetableGridBounds() {
+  const left = +$("tt-left").value/100, right = +$("tt-right").value/100, top = +$("tt-top").value/100, bottom = +$("tt-bottom").value/100;
+  const firstDay = +$("tt-first-day").value, lastDay = +$("tt-last-day").value, firstPeriod = +$("tt-first-period").value, lastPeriod = +$("tt-last-period").value;
+  if (![left,right,top,bottom].every(v => Number.isFinite(v) && v >= 0 && v <= 1) || right-left < .1 || bottom-top < .1 || firstDay > lastDay || firstPeriod > lastPeriod) throw new Error("请检查边界：右侧大于左侧，下侧大于上侧，星期和节次须顺序排列");
+  return {x:left*ttImage.width,y:top*ttImage.height,width:(right-left)*ttImage.width,height:(bottom-top)*ttImage.height,firstDay,lastDay,firstPeriod,lastPeriod};
+}
+function drawTimetablePreview(changed = false) {
+  if (!ttImage) return;
+  if (changed) $("tt-grid-confirm").checked = false;
+  const canvas = $("tt-preview"), scale = Math.min(1,900/ttImage.width);
+  canvas.width = Math.round(ttImage.width*scale); canvas.height = Math.round(ttImage.height*scale);
+  const ctx = canvas.getContext("2d"); ctx.drawImage(ttImage,0,0,canvas.width,canvas.height);
+  let b; try { b = timetableGridBounds(); } catch (e) { return; }
+  ctx.strokeStyle = "#006f80"; ctx.lineWidth = 2;
+  if ($("tt-image-mode").value !== "grid") { ctx.strokeRect(b.x*scale,b.y*scale,b.width*scale,b.height*scale); return; }
+  const cols = b.lastDay-b.firstDay+1, rows = b.lastPeriod-b.firstPeriod+1;
+  for (let i = 0; i <= cols; i++) { ctx.beginPath(); ctx.moveTo((b.x+b.width*i/cols)*scale,b.y*scale); ctx.lineTo((b.x+b.width*i/cols)*scale,(b.y+b.height)*scale); ctx.stroke(); }
+  for (let i = 0; i <= rows; i++) { ctx.beginPath(); ctx.moveTo(b.x*scale,(b.y+b.height*i/rows)*scale); ctx.lineTo((b.x+b.width)*scale,(b.y+b.height*i/rows)*scale); ctx.stroke(); }
+}
+function ocrLines(data) {
+  const lines = [];
+  for (const block of data.blocks || []) for (const paragraph of block.paragraphs || []) for (const line of paragraph.lines || []) lines.push(line);
+  return lines;
+}
+function detailImageBounds() {
+  const w = ttImage.width, h = ttImage.height, data = ttImage.getContext("2d").getImageData(0,0,w,h).data;
+  const white = (x,y) => { const at = (Math.round(y)*w+Math.round(x))*4; return data[at]>240 && data[at+1]>240 && data[at+2]>240; };
+  const runs = []; let start = null;
+  for (let y = Math.round(h*.15); y < h*.9; y += 3) {
+    let count = 0, total = 0;
+    for (let x = Math.round(w*.15); x < w*.85; x += 5) { total++; if (white(x,y)) count++; }
+    if (count/total > .45) { if (start === null) start = y; }
+    else if (start !== null) { runs.push([start,y]); start = null; }
+  }
+  if (start !== null) runs.push([start,h*.9]);
+  const longest = runs.sort((a,b) => (b[1]-b[0])-(a[1]-a[0]))[0];
+  if (!longest || longest[1]-longest[0] < h*.18) return [0,0,100,100];
+  const mid = Math.round((longest[0]+longest[1])/2);
+  let left = 0, right = w-1;
+  while (left < w*.3 && !white(left,mid)) left++;
+  while (right > w*.7 && !white(right,mid)) right--;
+  // Text may split the white region; follow its empty edge to keep the full title.
+  const probe = Math.round(left+(right-left)*.02);
+  let top = Math.round(longest[0]), bottom = Math.round(longest[1]);
+  while (top > 1 && white(probe,top-1)) top--;
+  while (bottom < h-1 && white(probe,bottom+1)) bottom++;
+  return [left/w*100,top/h*100,right/w*100,bottom/h*100].map(v => +v.toFixed(1));
+}
+function applyScreenshotMetadata(text) {
+  const compact = text.replace(/\s+/g,"");
+  const week = compact.match(/第(\d{1,2})周/);
+  if (week && +week[1] >= 1 && +week[1] <= 30 && !$("tt-source-week").value) $("tt-source-week").value = +week[1];
+  const term = compact.match(/(20\d{2})[-–—](20\d{2})学年第([12])学期/);
+  if (term && !$("tt-term").value) $("tt-term").value = term[1]+"–"+term[2]+" 第"+term[3]+"学期";
+}
+async function locateTimetableGrid() {
+  if (!ttDraft || !ttImage || ttOcrBusy || ttSaving) return;
+  const run = ++ttOcrRun, epoch = sessionEpoch;
+  setOcrBusy(true); hideMsg("tt-msg");
+  try {
+    const worker = await createTimetableWorker(run);
+    await worker.setParameters({tessedit_pageseg_mode:"11"});
+    ocrProgress("正在识别星期、节次和周次…",.2);
+    const {data} = await worker.recognize(ttImage,{}, {blocks:true,text:true});
+    if (run !== ttOcrRun || epoch !== sessionEpoch) return;
+    applyScreenshotMetadata(data.text);
+    const lines = ocrLines(data), days = [], rows = [];
+    for (const line of lines) {
+      const text = line.text.replace(/\s/g,"");
+      const day = TT_DAYS.indexOf(text.replace("星期","周"));
+      if (day >= 0) days.push({n:day+1,x:(line.bbox.x0+line.bbox.x1)/2,y:line.bbox.y0});
+      const row = text.match(/^第(\d{1,2})[节節]$/);
+      if (row && +row[1] >= 1 && +row[1] <= 12) rows.push({n:+row[1],y:(line.bbox.y0+line.bbox.y1)/2});
+    }
+    // Regress row/column labels rather than assuming the screenshot has a fixed pixel size.
+    function regression(points,key) {
+      const n = points.length, meanN = points.reduce((a,p) => a+p.n,0)/n, meanV = points.reduce((a,p) => a+p[key],0)/n;
+      const variance = points.reduce((a,p) => a+(p.n-meanN)**2,0);
+      if (!variance) return null;
+      const step = points.reduce((a,p) => a+(p.n-meanN)*(p[key]-meanV),0)/variance;
+      return {step,zero:meanV-step*meanN};
+    }
+    const dx = days.length >= 3 ? regression(days,"x") : null, dy = rows.length >= 4 ? regression(rows,"y") : null;
+    let found = false;
+    if (dx && dx.step > 10) {
+      const first = dx.zero+dx.step*.5 >= 0 ? 1 : Math.min(...days.map(p => p.n));
+      const last = dx.zero+dx.step*7.5 <= ttImage.width*1.01 ? 7 : Math.max(...days.map(p => p.n));
+      $("tt-first-day").value = first; $("tt-last-day").value = last;
+      $("tt-left").value = Math.max(0,(dx.zero+dx.step*(first-.5))/ttImage.width*100).toFixed(1);
+      $("tt-right").value = Math.min(100,(dx.zero+dx.step*(last+.5))/ttImage.width*100).toFixed(1);
+    }
+    if (dy && dy.step > 20) {
+      const first = Math.min(...rows.map(p => p.n)), last = Math.max(...rows.map(p => p.n));
+      $("tt-first-period").value = first; $("tt-last-period").value = last;
+      $("tt-top").value = Math.max(0,(dy.zero+dy.step*(first-.28))/ttImage.height*100).toFixed(1);
+      $("tt-bottom").value = Math.min(100,(dy.zero+dy.step*(last+.72))/ttImage.height*100).toFixed(1);
+      found = !!dx;
+    }
+    $("tt-grid-confirm").checked = false;
+    drawTimetablePreview();
+    showMsg("tt-msg",found ? "已尝试定位网格，请对照截图微调边界并确认；学期和截图周次也需要核对。" : "没有可靠识别出完整网格。请调整边界、首末星期及节次，或改用课程详情 / 文字列表模式。","ok");
+  } catch (e) { if (run === ttOcrRun && epoch === sessionEpoch) showMsg("tt-msg",e.message || "自动定位失败，可手动对齐网格"); }
+  finally { if (run === ttOcrRun) { if (ttWorker) { await ttWorker.terminate().catch(() => {}); ttWorker = null; } setOcrBusy(false); } }
+}
+function gridLessonRegions(b) {
+  const ctx = ttImage.getContext("2d"), pixels = ctx.getImageData(0,0,ttImage.width,ttImage.height).data;
+  const cols = b.lastDay-b.firstDay+1, rows = b.lastPeriod-b.firstPeriod+1, cw = b.width/cols, rh = b.height/rows;
+  const pixel = (x,y) => { const i = (Math.max(0,Math.min(ttImage.height-1,Math.round(y)))*ttImage.width+Math.max(0,Math.min(ttImage.width-1,Math.round(x))))*4; return [pixels[i],pixels[i+1],pixels[i+2]]; };
+  const cells = [];
+  for (let d = 0; d < cols; d++) {
+    const colors = [];
+    for (let r = 0; r < rows; r++) {
+      const samples = [];
+      for (const xx of [.1,.3,.5,.7,.9]) for (const yy of [.15,.4,.65,.9]) {
+        const p = pixel(b.x+(d+xx)*cw,b.y+(r+yy)*rh), max = Math.max(...p), min = Math.min(...p);
+        if (max > 210 && max-min > 10) samples.push(p);
+      }
+      colors.push(samples.length >= 4 ? [0,1,2].map(i => samples.map(p => p[i]).sort((a,c) => a-c)[Math.floor(samples.length/2)]) : null);
+    }
+    for (let r = 0; r < rows; r++) {
+      if (!colors[r]) continue;
+      let end = r;
+      while (end+1 < rows && colors[end+1] && Math.max(...colors[r].map((v,i) => Math.abs(v-colors[end+1][i]))) < 12) end++;
+      cells.push({day:b.firstDay+d,start:b.firstPeriod+r,end:b.firstPeriod+end,x:b.x+d*cw,y:b.y+r*rh,width:cw,height:(end-r+1)*rh});
+      r = end;
+    }
+  }
+  return cells;
+}
+function cropForOcr(region) {
+  const canvas = document.createElement("canvas"), scale = Math.min(3,Math.max(1,260/region.width));
+  canvas.width = Math.round((region.width-4)*scale); canvas.height = Math.round((region.height-4)*scale);
+  const ctx = canvas.getContext("2d",{willReadFrequently:true});
+  ctx.drawImage(ttImage,region.x+2,region.y+2,region.width-4,region.height-4,0,0,canvas.width,canvas.height);
+  const pixels = ctx.getImageData(0,0,canvas.width,canvas.height);
+  for (let i = 0; i < pixels.data.length; i += 4) {
+    const p = [pixels.data[i],pixels.data[i+1],pixels.data[i+2]], max = Math.max(...p), min = Math.min(...p);
+    const ink = max < 205 && max-min < 65;
+    pixels.data[i] = pixels.data[i+1] = pixels.data[i+2] = ink ? 0 : 255;
+  }
+  ctx.putImageData(pixels,0,0); return canvas;
+}
+function parseGridCourse(text, region) {
+  const lines = text.split("\n").map(t => t.trim()).filter(Boolean);
+  const at = lines.findIndex(t => /^(教|新教|馆|館|[A-Z][-–]\d)/.test(t.replace(/\s/g,"")));
+  const name = (at >= 0 ? lines.slice(0,at) : lines).join("").replace(/\s+/g,"");
+  const location = at >= 0 ? lines.slice(at).join("").replace(/\s+/g,"") : "";
+  return {name,location,day:region.day,start:region.start,end:region.end,weeksText:$("tt-source-week").value || "",confirmed:false,raw:text.trim()};
+}
+function parseDetailCourses(text) {
+  const compact = text.replace(/\s+/g,""), dayChars = "一二三四五六日天";
+  const dayMatch = compact.match(/(?:周|星期)([一二三四五六日天])/), periodMatch = compact.match(/第?(\d{1,2})[-–—~～](\d{1,2})节/), weeksMatch = compact.match(/(?:^|[^\d])(\d{1,2}(?:[-–—~～]\d{1,2})?[单双]?)周(?![一二三四五六日天])/);
+  let weeksText = "";
+  if (weeksMatch) { try { parseWeeks(weeksMatch[1]); weeksText = weeksMatch[1]; } catch (e) { /* Keep unreadable weeks empty. */ } }
+  const lines = text.split("\n").map(s => s.trim()).filter(Boolean);
+  const codeIndex = lines.findIndex(s => /\[\s*\d{5,}\s*\]/.test(s));
+  const name = codeIndex > 0 ? lines.slice(0,codeIndex).join("").replace(/\s/g,"") : "";
+  const location = lines.find(s => /校区/.test(s)) || "";
+  return [{name,location:location.replace(/^.*?([\u4e00-\u9fa5]{2,4}校区)\s*/,"$1 "),day:dayMatch?Math.min(7,dayChars.indexOf(dayMatch[1])+1):null,start:periodMatch?+periodMatch[1]:null,end:periodMatch?+periodMatch[2]:null,weeksText,confirmed:false,raw:text.trim().slice(0,4000)}];
+}
+async function recognizeTimetable() {
+  if (!ttDraft || !ttImage || ttOcrBusy || ttSaving) return;
+  const grid = $("tt-image-mode").value === "grid";
+  let bounds;
+  if (grid) {
+    try { bounds = timetableGridBounds(); } catch (e) { return showMsg("tt-msg",e.message); }
+    if (!$("tt-grid-confirm").checked) return showMsg("tt-msg","请先核对预览网格，并勾选网格对齐确认");
+  }
+  const run = ++ttOcrRun, epoch = sessionEpoch;
+  setOcrBusy(true); hideMsg("tt-msg");
+  try {
+    const worker = await createTimetableWorker(run), candidates = [];
+    if (grid) {
+      let regions = gridLessonRegions(bounds);
+      await worker.setParameters({tessedit_pageseg_mode:"6"});
+      if (!regions.length) {
+        // A monochrome screenshot has no colored blocks: preserve OCR text for manual arrangement.
+        ocrProgress("正在识别无色课表文字…",.3);
+        const {data} = await worker.recognize(ttImage);
+        candidates.push(...parseDetailCourses(data.text));
+      } else {
+        for (let i = 0; i < regions.length; i++) {
+          if (run !== ttOcrRun || epoch !== sessionEpoch) return;
+          ocrProgress("正在识别第 "+(i+1)+" / "+regions.length+" 个课程块…",i/regions.length);
+          const {data} = await worker.recognize(cropForOcr(regions[i]));
+          candidates.push(parseGridCourse(data.text,regions[i]));
+        }
+      }
+    } else {
+      await worker.setParameters({tessedit_pageseg_mode:"6"});
+      ocrProgress("正在识别课程详情 / 文字…",.3);
+      const {data} = await worker.recognize(cropForOcr(timetableGridBounds()));
+      candidates.push(...parseDetailCourses(data.text));
+    }
+    if (run !== ttOcrRun || epoch !== sessionEpoch || !ttDraft) return;
+    if (ttDraft.sessions.length+candidates.length > 300) throw new Error("安排数量超过 300 条，请分学期导入");
+    for (const candidate of candidates) {
+      const existing = !grid && candidate.day && candidate.start && candidate.end ? ttDraft.sessions.findIndex(s => s.day === candidate.day && s.start === candidate.start && s.end === candidate.end) : -1;
+      if (existing >= 0 && confirm("课程详情与第 "+(existing+1)+" 条安排时间相同，是否用详情的识别结果更新这条安排？仍需逐项核对。")) ttDraft.sessions[existing] = candidate;
+      else ttDraft.sessions.push(candidate);
+    }
+    renderTimetableReview();
+    showMsg("tt-msg","已生成 "+candidates.length+" 条待核对安排。识别可能遗漏或出错，请逐项对照原图；缺失内容请手动补齐。","ok");
+    $("tt-review-title").scrollIntoView({block:"start"});
+  } catch (e) { if (run === ttOcrRun && epoch === sessionEpoch) showMsg("tt-msg",e.message || "识别未成功，可以重试或手动添加课程"); }
+  finally { if (run === ttOcrRun) { if (ttWorker) { await ttWorker.terminate().catch(() => {}); ttWorker = null; } setOcrBusy(false); } }
+}
+window.addEventListener("beforeunload", e => { if (ttDraft || ttSaving) { e.preventDefault(); e.returnValue = ""; } });
+
+function refreshWhenVisible() {
+  if (document.visibilityState === "visible" && !$("appView").classList.contains("hidden")) loadItems({ quiet:true });
+}
+document.addEventListener("visibilitychange", refreshWhenVisible);
+window.addEventListener("focus", refreshWhenVisible);
+window.addEventListener("online", refreshWhenVisible);
+window.addEventListener("offline", () => { if (!$("appView").classList.contains("hidden")) setSync("网络已断开", true); });
+setInterval(refreshWhenVisible, 45000);
+document.querySelectorAll(".field").forEach(field => {
+  const label = field.querySelector("label"), input = field.querySelector("input,select,textarea");
+  if (label && input) label.htmlFor = input.id;
+});
+</script>
+</body>
+</html>
