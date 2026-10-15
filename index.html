@@ -303,6 +303,14 @@
   .tt-note { font-size:12px; color:var(--text-2); margin:10px 0; overflow-wrap:anywhere; }
   .tt-upload { display:block; border:1px dashed var(--accent); border-radius:8px; padding:14px; background:white; }
   .tt-upload input { width:100%; margin-top:8px; font-size:14px; }
+  .tt-files { margin:12px 0; }
+  .tt-file-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line-2); }
+  .tt-file-row > button:first-child { flex:1; min-width:0; text-align:left; overflow-wrap:anywhere; }
+  .tt-file-row small { display:block; margin-top:3px; color:var(--text-2); font-size:12px; }
+  .tt-file-row[aria-current="true"] { border-left:3px solid var(--accent); padding-left:9px; }
+  .tt-file-row[data-status="error"] small { color:var(--red); }
+  .tt-lesson-time { margin:0 0 10px; font-size:13px; color:var(--text-2); }
+  .tt-missing { color:#956012; font-size:12px; margin:8px 0; }
   .tt-preview { display:block; width:100%; height:auto; max-height:620px; object-fit:contain; background:#e9e9ec; touch-action:none; }
   .tt-bounds { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:12px 0; }
   .tt-bounds input { padding:9px 5px; font-size:14px; }
@@ -434,7 +442,7 @@
   <div class="msg" id="dataMsg" role="alert"></div>
   <div id="list"><div class="loading">正在读取云端数据…</div></div>
   <section id="tt-view" class="hidden">
-    <div class="tt-head"><h2>我的课表</h2><div class="tt-actions"><button class="btn ghost sm" onclick="openTimetableEditor('edit')">校正课表</button><button class="btn sm" onclick="openTimetableEditor('import')">导入截图</button></div></div>
+    <div class="tt-head"><h2>我的课表</h2><div class="tt-actions"><button class="btn ghost sm" onclick="openTimetableEditor('edit')">校正课表</button><button class="btn sm" onclick="openTimetableEditor('import')">导入课程详情</button></div></div>
     <div class="msg" id="tt-load-msg" role="alert"></div>
     <div id="tt-display"></div>
   </section>
@@ -446,18 +454,19 @@
         <div class="tt-row"><div class="field"><label for="tt-term">学期</label><input id="tt-term" placeholder="例：2026–2027 第1学期" maxlength="80" /></div><div class="field"><label for="tt-source-week">截图显示周次（可留空）</label><input id="tt-source-week" type="number" min="1" max="30" placeholder="第几周" /></div></div>
         <details><summary class="tt-note">12 节课的起止时间</summary><div class="tt-periods" id="tt-periods"></div></details>
       </div>
-      <div class="tt-section" id="tt-image-section"><h3>截图</h3>
-        <label class="tt-upload" for="tt-file">选择清晰截图<input id="tt-file" type="file" accept="image/png,image/jpeg,image/webp" onchange="loadTimetableImage(this.files[0])" /></label>
-        <p class="tt-note">PNG、JPG 或 WebP，最大 20 MB。截图仅在本机识别；保存的是确认后的课程文字。</p>
-        <div class="field" style="margin-top:12px"><label for="tt-image-mode">截图类型</label><select id="tt-image-mode" onchange="changeImageMode()"><option value="grid">周课表网格</option><option value="text">课程详情 / 文字列表</option></select></div>
+      <div class="tt-section" id="tt-image-section"><h3>课程详情截图</h3>
+        <label class="tt-upload" for="tt-file"><span id="tt-upload-label">添加课程详情截图</span><input id="tt-file" type="file" accept="image/png,image/jpeg,image/webp" multiple onchange="loadTimetableImages(this.files)" /></label>
+        <p class="tt-note">每张一门课，保留完整课名、地点、星期、节次和周次；可连续添加或一次多选。PNG、JPG、WebP，每张最多 20 MB。原图仅在本机识别。</p>
+        <div id="tt-detail-files" class="tt-files" aria-live="polite"></div>
+        <div class="field" style="margin-top:12px"><label for="tt-image-mode">截图类型</label><select id="tt-image-mode" onchange="changeImageMode()"><option value="text">单门课程完整详情</option><option value="grid">整周课表网格（备用）</option></select></div>
         <div id="tt-image-tools" class="hidden">
           <canvas id="tt-preview" class="tt-preview" aria-label="课表截图和识别网格"></canvas>
-            <div class="tt-bounds">
+            <details><summary class="tt-note">调整识别范围</summary><div class="tt-bounds">
               <div class="field"><label for="tt-left">左边界 %</label><input id="tt-left" type="number" min="0" max="100" step="0.1" oninput="drawTimetablePreview(true)" /></div>
               <div class="field"><label for="tt-right">右边界 %</label><input id="tt-right" type="number" min="0" max="100" step="0.1" oninput="drawTimetablePreview(true)" /></div>
               <div class="field"><label for="tt-top">上边界 %</label><input id="tt-top" type="number" min="0" max="100" step="0.1" oninput="drawTimetablePreview(true)" /></div>
               <div class="field"><label for="tt-bottom">下边界 %</label><input id="tt-bottom" type="number" min="0" max="100" step="0.1" oninput="drawTimetablePreview(true)" /></div>
-            </div>
+            </div></details>
           <div id="tt-grid-tools">
             <div class="tt-row">
               <div class="field"><label for="tt-first-day">截图第一列</label><select id="tt-first-day" onchange="drawTimetablePreview(true)"></select></div>
@@ -467,11 +476,11 @@
             </div>
             <label class="tt-check"><input id="tt-grid-confirm" type="checkbox" />网格已对齐课程区域，列对应星期，行对应节次</label>
           </div>
-          <div class="tt-actions"><button class="btn ghost sm" id="tt-locate" onclick="locateTimetableGrid()">自动定位网格</button><button class="btn sm" id="tt-recognize" onclick="recognizeTimetable()">识别课程</button></div>
         </div>
+        <div class="tt-actions"><button class="btn ghost sm hidden" id="tt-locate" onclick="locateTimetableGrid()">自动定位网格</button><button class="btn sm" id="tt-recognize" onclick="recognizeTimetable()" disabled>识别待处理截图</button></div>
       </div>
     </div>
-    <div class="tt-progress hidden" id="tt-progress"><progress id="tt-progress-bar" max="1" value="0"></progress><span id="tt-progress-text" role="status" aria-live="polite"></span><button class="link" onclick="cancelTimetableOcr()">取消识别</button></div>
+    <div class="tt-progress hidden" id="tt-progress"><progress id="tt-progress-bar" max="1" value="0"></progress><span id="tt-progress-text" role="status" aria-live="polite"></span><button class="link" onclick="cancelTimetableOcr(true)">取消识别</button></div>
     <div class="tt-edit-control">
       <div class="tt-section"><h3 id="tt-review-title">待校正课程</h3><p class="tt-note">只填截图可见或你已核实的信息。周次支持 8、5-16、1-17单、2-18双、1-4,8,10-12。缺失信息保留为空，省略的课程名需补齐。</p><div id="tt-review"></div><button class="btn ghost sm" onclick="addTimetableLesson()">＋ 添加一节课程</button></div>
       <div class="field"><label for="tt-save-mode">保存方式</label><select id="tt-save-mode"><option value="merge">合并到现有课表，保留原课程</option><option value="replace">替换整张课表</option></select></div>
@@ -592,6 +601,8 @@ const TT_PERIODS = [["08:00","08:50"],["09:00","09:50"],["10:10","11:00"],["11:1
 let timetable = null, timetableRow = null, ttDraft = null, ttImage = null;
 let ttWorker = null, ttOcrRun = 0, ttOcrBusy = false, ttSaving = false, ttLoadSequence = 0;
 let ttSelectedWeek = null, ttLoadOK = false;
+let ttDetailFiles = [], ttActiveDetail = null, ttImageLoadSequence = 0, ttImageLoading = false;
+let ttDetailId = 0;
 
 /* ================= 工具 ================= */
 const $ = id => document.getElementById(id);
@@ -632,6 +643,7 @@ function showAuth() {
   items = [];
   cancelTimetableOcr();
   timetable = null; timetableRow = null; ttDraft = null; ttImage = null; ttLoadOK = false; ttSelectedWeek = null;
+  clearTimetableImages();
   ttLoadSequence++;
   $("tt-editor").classList.add("hidden");
   $("tt-review").innerHTML = "";
@@ -1210,7 +1222,7 @@ function validTimetableDocument(doc) {
     if (!Array.isArray(p) || p.length !== 2 || !p.every(v => /^([01]\d|2[0-3]):[0-5]\d$/.test(v)) || p[0] >= p[1] || p[0] < previousEnd) return false;
     previousEnd = p[1];
   }
-  return doc.sessions.every(s => s && typeof s.name === "string" && s.name.trim() && s.name.length <= 200 && typeof s.location === "string" && s.location.length <= 200 && Number.isInteger(s.day) && s.day >= 1 && s.day <= 7 && Number.isInteger(s.start) && Number.isInteger(s.end) && s.start >= 1 && s.end <= 12 && s.start <= s.end && Array.isArray(s.weeks) && s.weeks.length && s.weeks.every(w => Number.isInteger(w) && w >= 1 && w <= 30));
+  return doc.sessions.every(s => s && typeof s.name === "string" && s.name.trim() && s.name.length <= 200 && typeof s.location === "string" && s.location.length <= 200 && ["teacher","code"].every(k => s[k] === undefined || (typeof s[k] === "string" && s[k].length <= 200)) && Number.isInteger(s.day) && s.day >= 1 && s.day <= 7 && Number.isInteger(s.start) && Number.isInteger(s.end) && s.start >= 1 && s.end <= 12 && s.start <= s.end && Array.isArray(s.weeks) && s.weeks.length && s.weeks.every(w => Number.isInteger(w) && w >= 1 && w <= 30));
 }
 async function loadTimetable() {
   if (ttDraft || ttSaving) return;
@@ -1278,14 +1290,17 @@ function openTimetableEditor(mode) {
   ttImage = null;
   $("tt-preview").width = 1;
   $("tt-file").value = "";
-  $("tt-image-mode").value = "grid";
+  clearTimetableImages();
+  $("tt-image-mode").value = "text";
+  $("tt-file").multiple = true;
+  $("tt-upload-label").textContent = "添加课程详情截图";
   $("tt-image-tools").classList.add("hidden");
-  $("tt-grid-tools").classList.remove("hidden");
-  $("tt-locate").classList.remove("hidden");
+  $("tt-grid-tools").classList.add("hidden");
+  $("tt-locate").classList.add("hidden");
   $("tt-source-week").value = "";
   $("tt-term").value = ttDraft.term;
   $("tt-save-mode").value = mode === "edit" ? "replace" : "merge";
-  $("tt-editor-title").textContent = mode === "edit" ? "校正课表" : "导入课表";
+  $("tt-editor-title").textContent = mode === "edit" ? "校正课表" : "导入课程详情";
   $("tt-image-section").classList.toggle("hidden", mode === "edit");
   $("tt-first-day").innerHTML = daySelect(1);
   $("tt-last-day").innerHTML = daySelect(7);
@@ -1303,6 +1318,7 @@ function closeTimetableEditor(force = false) {
   if (!force && ttDraft && !confirm("离开会丢弃尚未保存的课表改动，确定离开？")) return false;
   cancelTimetableOcr();
   ttDraft = null; ttImage = null;
+  clearTimetableImages();
   $("tt-review").innerHTML = "";
   $("tt-file").value = "";
   $("tt-preview").width = 1;
@@ -1311,10 +1327,34 @@ function closeTimetableEditor(force = false) {
   renderTimetable();
   return true;
 }
+function timetableLessonTime(s) {
+  const periods = ttDraft ? ttDraft.periods : TT_PERIODS;
+  const time = Number.isInteger(s.start) && Number.isInteger(s.end) && s.start >= 1 && s.end <= 12 && s.start <= s.end
+    ? "第"+s.start+"–"+s.end+"节 · "+periods[s.start-1][0]+"–"+periods[s.end-1][1] : "节次待填写";
+  return (TT_DAYS[s.day-1] || "星期待填写")+" · "+time;
+}
+function missingTimetableFields(s) {
+  const missing = [];
+  if (!s.name.trim() || /…|\.\.\./.test(s.name)) missing.push("完整课名");
+  if (!Number.isInteger(s.day) || s.day < 1 || s.day > 7) missing.push("星期");
+  if (!Number.isInteger(s.start) || !Number.isInteger(s.end) || s.start < 1 || s.end > 12 || s.start > s.end) missing.push("节次");
+  try { parseWeeks(s.weeksText); } catch (e) { missing.push("周次"); }
+  return missing.length ? "待补充或校正："+missing.join("、") : "信息已齐，待你核对";
+}
 function renderTimetableReview() {
   if (!ttDraft) return;
   $("tt-review-title").textContent = "待校正课程 · " + ttDraft.sessions.length + " 个上课安排";
-  $("tt-review").innerHTML = ttDraft.sessions.map((s,i) => '<article class="tt-review" data-lesson="'+i+'"><div class="tt-review-head"><strong>'+ (i+1) + ' · '+esc(s.name || "名称待填写")+'</strong><button type="button" class="icon-btn" data-remove="'+i+'" title="删除这条安排" aria-label="删除这条安排">'+ICONS['trash-2']+'</button></div><div class="field"><label for="tt-name-'+i+'">完整课程名称</label><input id="tt-name-'+i+'" data-key="name" maxlength="200" value="'+esc(s.name)+'" placeholder="请补齐被省略的名称"></div><div class="tt-row"><div class="field"><label for="tt-day-'+i+'">星期</label><select id="tt-day-'+i+'" data-key="day"><option value="">待填写</option>'+daySelect(s.day)+'</select></div><div class="field"><label for="tt-location-'+i+'">教室（可留空）</label><input id="tt-location-'+i+'" data-key="location" maxlength="200" value="'+esc(s.location)+'"></div><div class="field"><label for="tt-start-'+i+'">开始节次</label><select id="tt-start-'+i+'" data-key="start"><option value="">待填写</option>'+periodSelect(s.start)+'</select></div><div class="field"><label for="tt-end-'+i+'">结束节次</label><select id="tt-end-'+i+'" data-key="end"><option value="">待填写</option>'+periodSelect(s.end)+'</select></div></div><div class="field"><label for="tt-weeks-'+i+'">已核实周次</label><input id="tt-weeks-'+i+'" data-key="weeksText" value="'+esc(s.weeksText || "")+'" placeholder="例：8 或 5-16"></div>'+(s.raw?'<details><summary class="tt-note">识别原文</summary><p class="tt-note" style="white-space:pre-wrap">'+esc(s.raw)+'</p></details>':'')+'<label class="tt-check"><input type="checkbox" data-key="confirmed"'+(s.confirmed?' checked':'')+'>已逐项核对名称、星期、节次、周次及教室</label></article>').join("");
+  $("tt-review").innerHTML = ttDraft.sessions.map((s,i) => {
+    const source = ttDetailFiles.some(f => f.id === s.sourceId) ? '<button type="button" class="link" data-source-preview="'+s.sourceId+'">查看截图</button>' : '';
+    return '<article class="tt-review" data-lesson="'+i+'"><div class="tt-review-head"><strong>'+ (i+1) + ' · '+esc(s.name || "名称待填写")+'</strong><button type="button" class="icon-btn" data-remove="'+i+'" title="删除这条安排" aria-label="删除这条安排">'+ICONS['trash-2']+'</button></div>'+
+      '<p class="tt-lesson-time" id="tt-time-'+i+'">'+esc(timetableLessonTime(s))+'</p>'+
+      (s.sourceName ? '<p class="tt-note">来源：'+esc(s.sourceName)+' '+source+'</p>' : '')+
+      '<div class="field"><label for="tt-name-'+i+'">完整课程名称</label><input id="tt-name-'+i+'" data-key="name" maxlength="200" value="'+esc(s.name)+'" placeholder="请补齐被省略的名称"></div>'+
+      '<div class="tt-row"><div class="field"><label for="tt-teacher-'+i+'">教师（可留空）</label><input id="tt-teacher-'+i+'" data-key="teacher" maxlength="200" value="'+esc(s.teacher || "")+'"></div><div class="field"><label for="tt-code-'+i+'">课程号（可留空）</label><input id="tt-code-'+i+'" data-key="code" maxlength="200" value="'+esc(s.code || "")+'"></div></div>'+
+      '<div class="tt-row"><div class="field"><label for="tt-day-'+i+'">星期</label><select id="tt-day-'+i+'" data-key="day"><option value="">待填写</option>'+daySelect(s.day)+'</select></div><div class="field"><label for="tt-location-'+i+'">教室（可留空）</label><input id="tt-location-'+i+'" data-key="location" maxlength="200" value="'+esc(s.location)+'"></div><div class="field"><label for="tt-start-'+i+'">开始节次</label><select id="tt-start-'+i+'" data-key="start"><option value="">待填写</option>'+periodSelect(s.start)+'</select></div><div class="field"><label for="tt-end-'+i+'">结束节次</label><select id="tt-end-'+i+'" data-key="end"><option value="">待填写</option>'+periodSelect(s.end)+'</select></div></div>'+
+      '<div class="field"><label for="tt-weeks-'+i+'">已核实周次</label><input id="tt-weeks-'+i+'" data-key="weeksText" value="'+esc(s.weeksText || "")+'" placeholder="例：8 或 5-16"></div><p class="tt-missing" id="tt-missing-'+i+'">'+esc(missingTimetableFields(s))+'</p>'+
+      (s.raw?'<details><summary class="tt-note">识别原文</summary><p class="tt-note" style="white-space:pre-wrap">'+esc(s.raw)+'</p></details>':'')+'<label class="tt-check"><input type="checkbox" data-key="confirmed"'+(s.confirmed?' checked':'')+'>已逐项核对名称、星期、节次、周次及教室</label></article>';
+  }).join("");
   // A missing select value stays visibly missing instead of defaulting to Monday / period 1.
   ttDraft.sessions.forEach((s,i) => ["day","start","end"].forEach(key => $("tt-"+key+"-"+i).value = s[key] || ""));
 }
@@ -1332,13 +1372,20 @@ $("tt-review").addEventListener("input", e => {
   const s = ttDraft.sessions[+article.dataset.lesson];
   s[key] = key === "confirmed" ? e.target.checked : ["day","start","end"].includes(key) ? (+e.target.value || null) : e.target.value;
   if (key !== "confirmed") { s.confirmed = false; article.querySelector('[data-key="confirmed"]').checked = false; }
+  $("tt-time-"+article.dataset.lesson).textContent = timetableLessonTime(s);
+  $("tt-missing-"+article.dataset.lesson).textContent = s.confirmed ? "已核对" : missingTimetableFields(s);
 });
 $("tt-review").addEventListener("click", e => {
+  const preview = e.target.closest("[data-source-preview]");
+  if (preview) { previewTimetableDetail(+preview.dataset.sourcePreview); return; }
   const button = e.target.closest("[data-remove]");
   if (button && ttDraft && !ttSaving && !ttOcrBusy) { ttDraft.sessions.splice(+button.dataset.remove,1); renderTimetableReview(); }
 });
 $("tt-periods").addEventListener("input", e => {
-  if (ttDraft && e.target.dataset.period !== undefined) ttDraft.periods[+e.target.dataset.period][+e.target.dataset.end] = e.target.value;
+  if (ttDraft && e.target.dataset.period !== undefined) {
+    ttDraft.periods[+e.target.dataset.period][+e.target.dataset.end] = e.target.value;
+    ttDraft.sessions.forEach((s,i) => $("tt-time-"+i).textContent = timetableLessonTime(s));
+  }
 });
 $("tt-display").addEventListener("click", e => {
   const button = e.target.closest("[data-tt-edit]");
@@ -1347,8 +1394,11 @@ $("tt-display").addEventListener("click", e => {
 function mergeTimetableSessions(existing, incoming) {
   const result = structuredClone(existing);
   for (const lesson of incoming) {
-    const match = result.find(s => s.name === lesson.name && s.location === lesson.location && s.day === lesson.day && s.start === lesson.start && s.end === lesson.end);
-    if (match) match.weeks = [...new Set(match.weeks.concat(lesson.weeks))].sort((a,b) => a-b);
+    const match = result.find(s => s.name === lesson.name && s.location === lesson.location && s.day === lesson.day && s.start === lesson.start && s.end === lesson.end && (!s.code || !lesson.code || s.code === lesson.code));
+    if (match) {
+      match.weeks = [...new Set(match.weeks.concat(lesson.weeks))].sort((a,b) => a-b);
+      for (const key of ["teacher","code"]) if (lesson[key]) match[key] = lesson[key];
+    }
     else result.push(lesson);
   }
   return result;
@@ -1367,10 +1417,13 @@ async function saveTimetable() {
   try {
     if (!ttLoadOK) throw new Error("云端课表尚未成功读取，暂不保存，以免覆盖其他设备的数据。请先返回并刷新。");
     if (!navigator.onLine) throw new Error("当前离线，课表尚未保存。请联网后重试。");
+    if (ttDetailFiles.some(f => f.status !== "done")) throw new Error("还有截图尚未识别成功，请先识别，或移除不需要的截图后保存");
     if (ttDraft.sessions.some(s => !s.confirmed)) throw new Error("请逐项校正，并勾选每条课程的核对确认");
     const incoming = ttDraft.sessions.map(s => {
       if (/…|\.\.\./.test(s.name)) throw new Error("课程名称含省略号，请补齐完整名称");
-      return {name:s.name.trim(),location:s.location.trim(),day:s.day,start:s.start,end:s.end,weeks:parseWeeks(s.weeksText)};
+      const lesson = {name:s.name.trim(),location:s.location.trim(),day:s.day,start:s.start,end:s.end,weeks:parseWeeks(s.weeksText)};
+      for (const key of ["teacher","code"]) if (s[key]) lesson[key] = s[key].trim();
+      return lesson;
     });
     const term = $("tt-term").value.trim();
     if (!term) throw new Error("请填写学期，不确定时先不要保存");
@@ -1418,11 +1471,14 @@ function setOcrBusy(value) {
   $("tt-editor").querySelectorAll(".tt-edit-control input,.tt-edit-control select,.tt-edit-control button").forEach(el => el.disabled = value);
   $("tt-progress").classList.toggle("hidden",!value);
   $("tt-save").disabled = value;
+  renderTimetableUploads();
 }
-function cancelTimetableOcr() {
+function cancelTimetableOcr(showNotice = false) {
   ttOcrRun++;
   if (ttWorker) { ttWorker.terminate().catch(() => {}); ttWorker = null; }
+  ttDetailFiles.forEach(f => { if (f.status === "processing") f.status = "pending"; });
   setOcrBusy(false);
+  if (showNotice && ttDraft) showMsg("tt-msg","识别已取消，已生成的校正结果仍保留；剩余截图可继续识别","ok");
 }
 function ocrProgress(text, progress) {
   $("tt-progress-text").textContent = text;
@@ -1446,38 +1502,123 @@ async function createTimetableWorker(run) {
   await worker.setParameters({user_defined_dpi:"300",preserve_interword_spaces:"1"});
   return worker;
 }
-async function loadTimetableImage(file) {
-  if (!file || !ttDraft || ttOcrBusy || ttSaving) return;
+function clearTimetableImages() {
+  ttDetailFiles = []; ttActiveDetail = null; ttImageLoading = false; ttImageLoadSequence++;
+  $("tt-detail-files").innerHTML = "";
+}
+function renderTimetableUploads() {
+  const grid = $("tt-image-mode").value === "grid";
+  const labels = {pending:"待识别",processing:"识别中…",done:"已识别，待校正",error:"未识别成功"};
+  $("tt-detail-files").classList.toggle("hidden",grid);
+  $("tt-detail-files").innerHTML = ttDetailFiles.map(f => '<div class="tt-file-row" data-status="'+f.status+'" aria-current="'+(ttActiveDetail === f.id)+'"><button type="button" class="link" data-preview-file="'+f.id+'"'+(ttOcrBusy?' disabled':'')+'>'+esc(f.file.name)+'<small>'+esc(f.error || (f.status === "done" ? "已识别 · "+f.count+" 条新安排" : labels[f.status]))+'</small></button><button type="button" class="icon-btn" data-remove-file="'+f.id+'" title="移除截图，保留已生成的课程" aria-label="移除截图，保留已生成的课程"'+(ttOcrBusy?' disabled':'')+'>'+ICONS['trash-2']+'</button></div>').join("");
+  $("tt-recognize").textContent = grid ? "识别课程网格" : "识别待处理截图";
+  $("tt-recognize").disabled = ttOcrBusy || ttImageLoading || (grid ? !ttImage : !ttDetailFiles.some(f => f.status !== "done"));
+}
+async function loadTimetableImages(files) {
+  if (!ttDraft || ttOcrBusy || ttSaving) return;
+  const selected = Array.from(files || []);
+  $("tt-file").value = "";
+  if (!selected.length) return;
   hideMsg("tt-msg");
-  if (!/^image\/(png|jpeg|webp)$/.test(file.type) || file.size > 20*1024*1024) return showMsg("tt-msg","请选择不超过 20 MB 的 PNG、JPG 或 WebP 截图");
-  const epoch = sessionEpoch, draft = ttDraft;
+  const valid = file => /^image\/(png|jpeg|webp)$/.test(file.type) && file.size <= 20*1024*1024;
+  if (selected.some(f => !valid(f))) return showMsg("tt-msg","请选择每张不超过 20 MB 的 PNG、JPG 或 WebP 截图");
+  if ($("tt-image-mode").value === "grid") {
+    if (selected.length !== 1) return showMsg("tt-msg","整周网格每次选择一张；多张课程详情请选择单门课程模式");
+    return loadTimetableImage(selected[0]);
+  }
+  const added = selected.filter((file,i) => !ttDetailFiles.concat(selected.slice(0,i).map(f => ({file:f}))).some(f => f.file.name === file.name && f.file.size === file.size && f.file.lastModified === file.lastModified));
+  if (ttDetailFiles.length+added.length > 30 || ttDetailFiles.concat(added.map(file => ({file}))).reduce((n,f) => n+f.file.size,0) > 100*1024*1024) return showMsg("tt-msg","一批最多 30 张、合计 100 MB；请先保存这一批再继续导入");
+  const entries = added.map(file => ({id:++ttDetailId,file,status:"pending",bounds:null,error:"",count:0}));
+  ttDetailFiles.push(...entries);
+  renderTimetableUploads();
+  if (entries.length) await previewTimetableDetail(entries[0].id);
+  else showMsg("tt-msg","这些截图已在本次列表中，无需重复添加","ok");
+}
+async function decodeTimetableImage(file) {
   const url = URL.createObjectURL(file), image = new Image();
   try {
     image.src = url; await image.decode();
-    if (epoch !== sessionEpoch || draft !== ttDraft) return;
     if (image.width * image.height > 32000000 || image.width < 200 || image.height < 200) throw new Error("图片尺寸不适合识别，请使用清晰的常规截图");
-    // Limit the canvas working set on iPhones; larger uploads retain their aspect ratio.
     const scale = Math.min(1,2400/image.height,1600/image.width);
-    ttImage = document.createElement("canvas"); ttImage.width = Math.round(image.width*scale); ttImage.height = Math.round(image.height*scale);
-    ttImage.getContext("2d").drawImage(image,0,0,ttImage.width,ttImage.height);
+    const canvas = document.createElement("canvas"); canvas.width = Math.round(image.width*scale); canvas.height = Math.round(image.height*scale);
+    canvas.getContext("2d").drawImage(image,0,0,canvas.width,canvas.height);
+    return canvas;
+  } finally { URL.revokeObjectURL(url); }
+}
+function setTimetableImage(image, bounds) {
+  ttImage = image;
+  $("tt-image-tools").classList.remove("hidden");
+  ["left","top","right","bottom"].forEach((key,i) => $("tt-"+key).value = bounds[i]);
+  $("tt-grid-confirm").checked = false;
+  drawTimetablePreview();
+}
+async function previewTimetableDetail(id) {
+  if (!ttDraft || ttOcrBusy || ttSaving) return;
+  const entry = ttDetailFiles.find(f => f.id === id);
+  if (!entry) return;
+  $("tt-image-mode").value = "text";
+  $("tt-file").multiple = true;
+  $("tt-upload-label").textContent = "添加课程详情截图";
+  $("tt-grid-tools").classList.add("hidden");
+  $("tt-locate").classList.add("hidden");
+  const epoch = sessionEpoch, draft = ttDraft, sequence = ++ttImageLoadSequence;
+  ttImageLoading = true; renderTimetableUploads();
+  try {
+    const image = await decodeTimetableImage(entry.file);
+    if (epoch !== sessionEpoch || draft !== ttDraft || sequence !== ttImageLoadSequence) return;
+    ttActiveDetail = id; ttImage = image;
+    setTimetableImage(image,entry.bounds || detailImageBounds());
+    $("tt-preview").scrollIntoView({block:"nearest"});
+  } catch (e) {
+    if (epoch === sessionEpoch && draft === ttDraft && sequence === ttImageLoadSequence) {
+      entry.status = "error"; entry.error = e.message || "无法打开截图";
+      showMsg("tt-msg",entry.error);
+    }
+  } finally {
+    if (sequence === ttImageLoadSequence) { ttImageLoading = false; renderTimetableUploads(); }
+  }
+}
+$("tt-detail-files").addEventListener("click", e => {
+  if (!ttDraft || ttOcrBusy || ttSaving) return;
+  const preview = e.target.closest("[data-preview-file]"), remove = e.target.closest("[data-remove-file]");
+  if (preview) previewTimetableDetail(+preview.dataset.previewFile);
+  if (remove) {
+    const id = +remove.dataset.removeFile;
+    ttImageLoadSequence++; ttImageLoading = false;
+    ttDetailFiles = ttDetailFiles.filter(f => f.id !== id);
+    if (id === ttActiveDetail) { ttImageLoadSequence++; ttImageLoading = false; ttActiveDetail = null; ttImage = null; $("tt-image-tools").classList.add("hidden"); }
+    renderTimetableUploads(); renderTimetableReview();
+    if (!ttImage && ttDetailFiles.length) previewTimetableDetail(ttDetailFiles[0].id);
+  }
+});
+async function loadTimetableImage(file) {
+  if (!file || !ttDraft || ttOcrBusy || ttSaving) return;
+  const epoch = sessionEpoch, draft = ttDraft, sequence = ++ttImageLoadSequence;
+  ttImageLoading = true; renderTimetableUploads();
+  try {
+    const image = await decodeTimetableImage(file);
+    if (epoch !== sessionEpoch || draft !== ttDraft || sequence !== ttImageLoadSequence) return;
+    ttActiveDetail = null;
+    setTimetableImage(image,[15,20,99,96]);
     $("tt-image-tools").classList.remove("hidden");
-    ["left","top","right","bottom"].forEach((key,i) => $("tt-"+key).value = [15,20,99,96][i]);
-    $("tt-grid-confirm").checked = false;
-    drawTimetablePreview();
-    if ($("tt-image-mode").value === "grid") await locateTimetableGrid();
-    else changeImageMode();
+    await locateTimetableGrid();
   } catch (e) { if (epoch === sessionEpoch && draft === ttDraft) showMsg("tt-msg",e.message || "无法打开截图，请换成 PNG 或 JPG"); }
-  finally { URL.revokeObjectURL(url); }
+  finally { if (sequence === ttImageLoadSequence) { ttImageLoading = false; renderTimetableUploads(); } }
 }
 function changeImageMode() {
+  if (ttOcrBusy || ttSaving) return;
+  ttImageLoadSequence++; ttImageLoading = false;
   const grid = $("tt-image-mode").value === "grid";
+  $("tt-file").multiple = !grid;
+  $("tt-upload-label").textContent = grid ? "选择整周网格截图" : "添加课程详情截图";
   $("tt-grid-tools").classList.toggle("hidden",!grid);
   $("tt-locate").classList.toggle("hidden",!grid);
-  if (!grid && ttImage) {
-    const bounds = detailImageBounds();
-    ["left","top","right","bottom"].forEach((key,i) => $("tt-"+key).value = bounds[i]);
+  if (!grid && ttDetailFiles.length) {
+    previewTimetableDetail(ttActiveDetail || ttDetailFiles[0].id);
+  } else {
+    ttActiveDetail = null; ttImage = null; $("tt-image-tools").classList.add("hidden");
   }
-  drawTimetablePreview(true);
+  renderTimetableUploads();
 }
 function timetableGridBounds() {
   const left = +$("tt-left").value/100, right = +$("tt-right").value/100, top = +$("tt-top").value/100, bottom = +$("tt-bottom").value/100;
@@ -1488,6 +1629,10 @@ function timetableGridBounds() {
 function drawTimetablePreview(changed = false) {
   if (!ttImage) return;
   if (changed) $("tt-grid-confirm").checked = false;
+  if (changed && $("tt-image-mode").value !== "grid") {
+    const entry = ttDetailFiles.find(f => f.id === ttActiveDetail);
+    if (entry) entry.bounds = ["left","top","right","bottom"].map(key => +$("tt-"+key).value);
+  }
   const canvas = $("tt-preview"), scale = Math.min(1,900/ttImage.width);
   canvas.width = Math.round(ttImage.width*scale); canvas.height = Math.round(ttImage.height*scale);
   const ctx = canvas.getContext("2d"); ctx.drawImage(ttImage,0,0,canvas.width,canvas.height);
@@ -1628,18 +1773,110 @@ function parseGridCourse(text, region) {
   const location = at >= 0 ? lines.slice(at).join("").replace(/\s+/g,"") : "";
   return {name,location,day:region.day,start:region.start,end:region.end,weeksText:$("tt-source-week").value || "",confirmed:false,raw:text.trim()};
 }
+function detailWeeks(text) {
+  const pattern = /(?:^|[^\d])(\d[\d,，、\-–—~～至到单双周()（）\s]*周(?:\s*[（(]?[单双](?:周)?[）)]?)?)(?![一二三四五六日天])/g;
+  for (const match of text.matchAll(pattern)) {
+    const value = match[1].replace(/\s/g,"").replace(/[，、]/g,",").replace(/[至到]/g,"-")
+      .replace(/[（(]([单双])周?[）)]/g,"$1").replace(/周([单双])/g,"$1").replace(/周/g,"");
+    try { parseWeeks(value); return value; } catch (e) { /* Leave an unreadable range blank. */ }
+  }
+  return "";
+}
 function parseDetailCourses(text) {
-  const compact = text.replace(/\s+/g,""), dayChars = "一二三四五六日天";
-  const dayMatch = compact.match(/(?:周|星期)([一二三四五六日天])/), periodMatch = compact.match(/第?(\d{1,2})[-–—~～](\d{1,2})节/), weeksMatch = compact.match(/(?:^|[^\d])(\d{1,2}(?:[-–—~～]\d{1,2})?[单双]?)周(?![一二三四五六日天])/);
-  let weeksText = "";
-  if (weeksMatch) { try { parseWeeks(weeksMatch[1]); weeksText = weeksMatch[1]; } catch (e) { /* Keep unreadable weeks empty. */ } }
-  const lines = text.split("\n").map(s => s.trim()).filter(Boolean);
-  const codeIndex = lines.findIndex(s => /\[\s*\d{5,}\s*\]/.test(s));
-  const name = codeIndex > 0 ? lines.slice(0,codeIndex).join("").replace(/\s/g,"") : "";
-  const location = lines.find(s => /校区/.test(s)) || "";
-  return [{name,location:location.replace(/^.*?([\u4e00-\u9fa5]{2,4}校区)\s*/,"$1 "),day:dayMatch?Math.min(7,dayChars.indexOf(dayMatch[1])+1):null,start:periodMatch?+periodMatch[1]:null,end:periodMatch?+periodMatch[2]:null,weeksText,confirmed:false,raw:text.trim().slice(0,4000)}];
+  const clean = String(text || "").replace(/\r/g,"");
+  const compact = clean.replace(/\s+/g,"").replace(/(\d)[一ー−﹣－](?=\d)/g,"$1-"), dayChars = "一二三四五六日天";
+  const lines = clean.split("\n").map(s => s.trim()).filter(Boolean);
+  const codePattern = /[\[【［]\s*([A-Za-z0-9_-]{5,24})\s*[\]】］]/;
+  const codeIndex = lines.findIndex(s => codePattern.test(s));
+  const code = (clean.match(codePattern) || clean.match(/课程(?:编号|代码|号)[:：]\s*([A-Za-z0-9_-]+)/) || [])[1] || "";
+  const metadata = /校区|上课地点|教室|教师[:：]|任课教师|(?:周|星期|礼拜)[一二三四五六日天1-7]|\d\s*周/;
+  const nameLabel = lines.find(s => /^(?:课程名称|课程名)[:：]/.test(s));
+  let titleLines = codeIndex >= 0 ? lines.slice(0,codeIndex).concat(lines[codeIndex].split(codePattern)[0]) : lines.slice(0,lines.findIndex(s => metadata.test(s)) < 0 ? 0 : lines.findIndex(s => metadata.test(s)));
+  titleLines = titleLines.filter(s => s && !/^(?:返回|取消|确定|课程详情|课表|详情)$/.test(s.replace(/\s/g,"")) && !/学年|学期|^\d{1,2}:\d{2}|^课程(?:编号|代码|号)[:：]/.test(s));
+  const name = (nameLabel ? nameLabel.replace(/^(?:课程名称|课程名)[:：]\s*/,"") : titleLines.join("")).replace(/\s+/g,"");
+  const locationIndex = lines.findIndex(s => /校区|^(?:上课地点|地点|教室)[:：]/.test(s));
+  let location = locationIndex < 0 ? "" : lines[locationIndex].replace(/^(?:上课地点|地点|教室)[:：]\s*/,"").replace(/^.*?([\u4e00-\u9fa5]{2,4}校区)\s*/,"$1 ");
+  let afterLocation = locationIndex+1;
+  while (locationIndex >= 0 && afterLocation < lines.length && /^[A-Za-z\d\-–]+$/.test(lines[afterLocation])) location += lines[afterLocation++];
+  const teacherLabel = lines.find(s => /^(?:任课教师|教师|老师)[:：]/.test(s));
+  let teacher = teacherLabel ? teacherLabel.replace(/^(?:任课教师|教师|老师)[:：]\s*/,"") : "";
+  if (!teacher && locationIndex >= 0 && lines[afterLocation] && !metadata.test(lines[afterLocation]) && !/返回|取消|确定|学期|\d.*节/.test(lines[afterLocation])) teacher = lines[afterLocation].replace(/^[A-Za-z0-9]\s+(?=[\u4e00-\u9fa5])/,"");
+  const base = {name,location,teacher,code,confirmed:false,raw:clean.trim().slice(0,4000)};
+  const days = [...compact.matchAll(/(?:周|星期|礼拜)([一二三四五六日天1-7])/g)];
+  if (!days.length) {
+    const period = compact.match(/第?(\d{1,2})(?:[-–—~～至到](\d{1,2}))?节/);
+    return [{...base,day:null,start:period?+period[1]:null,end:period?+(period[2] || period[1]):null,weeksText:detailWeeks(compact)}];
+  }
+  // Details usually list weeks before the weekday. Keep that order across multiple meetings.
+  const weeksFirst = !!detailWeeks(compact.slice(0,days[0].index));
+  let previousPeriodEnd = 0;
+  return days.map((day,i) => {
+    const from = day.index+day[0].length, to = i+1 < days.length ? days[i+1].index : compact.length;
+    const after = compact.slice(from,to), period = after.match(/第?(\d{1,2})(?:[-–—~～至到](\d{1,2}))?节/);
+    const weeksText = weeksFirst ? detailWeeks(compact.slice(previousPeriodEnd,day.index)) : detailWeeks(after);
+    previousPeriodEnd = period ? from+period.index+period[0].length : from;
+    return {...base,day:/\d/.test(day[1])?+day[1]:Math.min(7,dayChars.indexOf(day[1])+1),start:period?+period[1]:null,end:period?+(period[2] || period[1]):null,weeksText};
+  });
+}
+function addDetailCandidates(candidates, entry) {
+  if (ttDraft.sessions.length+candidates.length > 300) throw new Error("安排数量超过 300 条，请分批导入");
+  let added = 0;
+  for (const candidate of candidates) {
+    const signature = s => {
+      if (!s.name || !s.day || !s.start || !s.end || !s.weeksText) return null;
+      try { return JSON.stringify([s.name,s.location,s.day,s.start,s.end,parseWeeks(s.weeksText),s.code || "",s.teacher || ""]); } catch (e) { return null; }
+    };
+    const key = signature(candidate);
+    if (key && ttDraft.sessions.some(s => signature(s) === key)) continue;
+    ttDraft.sessions.push({...candidate,sourceId:entry.id,sourceName:entry.file.name}); added++;
+  }
+  return added;
+}
+async function recognizeTimetableDetails() {
+  const pending = ttDetailFiles.filter(f => f.status !== "done");
+  if (!ttDraft || ttOcrBusy || ttSaving || ttImageLoading || !pending.length) return;
+  const run = ++ttOcrRun, epoch = sessionEpoch, draft = ttDraft;
+  ttImageLoadSequence++;
+  setOcrBusy(true); hideMsg("tt-msg");
+  let added = 0, failed = 0;
+  try {
+    const worker = await createTimetableWorker(run);
+    await worker.setParameters({tessedit_pageseg_mode:"6"});
+    for (let i = 0; i < pending.length; i++) {
+      if (run !== ttOcrRun || epoch !== sessionEpoch || draft !== ttDraft) return;
+      const entry = pending[i];
+      entry.status = "processing"; entry.error = ""; renderTimetableUploads();
+      ocrProgress("正在识别课程详情 "+(i+1)+" / "+pending.length+"…",i/pending.length);
+      try {
+        const image = await decodeTimetableImage(entry.file);
+        if (run !== ttOcrRun || epoch !== sessionEpoch || draft !== ttDraft) return;
+        ttActiveDetail = entry.id; ttImage = image;
+        setTimetableImage(image,entry.bounds || detailImageBounds());
+        const {data} = await worker.recognize(cropForOcr(timetableGridBounds()));
+        if (run !== ttOcrRun || epoch !== sessionEpoch || draft !== ttDraft) return;
+        entry.count = addDetailCandidates(parseDetailCourses(data.text),entry);
+        added += entry.count; entry.status = "done";
+        renderTimetableReview();
+      } catch (e) {
+        if (run !== ttOcrRun || epoch !== sessionEpoch || draft !== ttDraft) return;
+        entry.status = "error"; entry.error = e.message || "识别失败，可重试"; failed++;
+      }
+      renderTimetableUploads();
+    }
+    showMsg("tt-msg","新增 "+added+" 条待校正安排"+(failed?"；"+failed+" 张未成功，可重试，已识别结果保留":"。可继续添加其他课程截图，或校正后合并保存"),failed?undefined:"ok");
+    $("tt-review-title").scrollIntoView({block:"start"});
+  } catch (e) {
+    if (run === ttOcrRun && epoch === sessionEpoch && draft === ttDraft) showMsg("tt-msg",e.message || "识别未成功，可以重试或手动补齐");
+  } finally {
+    if (run === ttOcrRun) {
+      const worker = ttWorker; ttWorker = null;
+      if (worker) await worker.terminate().catch(() => {});
+      if (run === ttOcrRun) setOcrBusy(false);
+    }
+  }
 }
 async function recognizeTimetable() {
+  if ($("tt-image-mode").value !== "grid") return recognizeTimetableDetails();
   if (!ttDraft || !ttImage || ttOcrBusy || ttSaving) return;
   const grid = $("tt-image-mode").value === "grid";
   let bounds;
