@@ -2394,12 +2394,12 @@ document.querySelectorAll(".field").forEach(field => {
     return { auth: auth, database: { from: from }, demo: true };
   };
 
-  injectStyles();
-  injectBanner();
-  patchApp();
-  if (!document.body.dataset.demoBound) {
-    document.body.dataset.demoBound = "1";
-    window.addEventListener("online", function () {});
+  // 只有演示模式才动界面；DEMO_MODE = false（自建云端版）时保持原样。
+  var IS_DEMO = typeof DEMO_MODE !== "undefined" && DEMO_MODE === true;
+  if (IS_DEMO) {
+    injectStyles();
+    injectBanner();
+    patchApp();
   }
 })();
 </script>
