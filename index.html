@@ -314,7 +314,7 @@
   .tt-file-row[data-status="error"] small { color:var(--red); }
   .tt-lesson-time { margin:0 0 10px; font-size:13px; color:var(--text-2); }
   .tt-missing { color:#956012; font-size:12px; margin:8px 0; }
-  .tt-preview { display:block; width:100%; height:auto; max-height:620px; object-fit:contain; background:#e9e9ec; touch-action:none; }
+  .tt-preview { display:block; width:100%; height:auto; max-height:620px; object-fit:contain; background:#e9e9ec; touch-action:pan-y; }
   .tt-bounds { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:12px 0; }
   .tt-bounds input { padding:9px 5px; font-size:14px; }
   .tt-check { display:flex; align-items:flex-start; gap:8px; font-size:13px; margin:12px 0; }
@@ -338,10 +338,10 @@
     .tt-actions .btn { padding:9px; }
     .tt-periods { grid-template-columns:1fr; }
     .tt-bounds { grid-template-columns:repeat(2,minmax(0,1fr)); }
-    .tt-grid { grid-template-columns:48px repeat(7,minmax(0,1fr)); grid-template-rows:38px repeat(12,58px); }
+    .tt-grid { grid-template-columns:40px repeat(7,minmax(0,1fr)); grid-template-rows:38px repeat(12,58px); }
     .tt-cell { padding:5px 1px; font-size:10px; }
     .tt-cell small { font-size:9px; }
-    .tt-lesson { margin:1px; border-left-width:2px; padding:4px 2px; font-size:10.5px; }
+    .tt-lesson { margin:1px; border-left-width:2px; padding:4px 1px; font-size:9.5px; line-height:1.35; }
     .tt-lesson strong { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:6; overflow:hidden; }
     .tt-lesson small { font-size:9px; }
     .tt-unplaced { display:block; }
@@ -539,53 +539,63 @@
 </div>
 
 <script>
-/* 加载云服务 SDK：主域在国内偶发不通，带镜像自动切换 */
-(function () {
-  var urls = [
-    "https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js",
-    "https://fastly.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js",
-    "https://unpkg.com/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"
-  ];
-  var i = 0;
-  function next() {
-    if (i >= urls.length) {
-      document.body.insertAdjacentHTML("afterbegin",
-        '<div style="max-width:720px;margin:20px auto;padding:12px 14px;border-radius:12px;background:#fdecec;color:#e5484d;font-size:13px">依赖加载失败：请检查网络后刷新页面重试。</div>');
-      return;
-    }
-    var s = document.createElement("script");
-    s.src = urls[i++];
-    s.onload = function () {
-      if (!window.WorkBuddyCloud) return next();
-      // SDK may finish before the parser reaches the application script.
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", function () { startCloud(); }, { once: true });
-      } else startCloud();
-    };
-    s.onerror = next;
-    document.head.appendChild(s);
-  }
-  next();
-})();
-</script>
-<script>
-/* ===== 云服务初始化：endpoint 与 publishableKey 均来自 publicConfig ===== */
+/* ===== 初始化：二选一 ======================================================
+   演示模式（DEMO_MODE = true）：不联网、不需要账号，数据存在本机浏览器，
+                                直接双击本文件或用静态托管打开即可试玩。
+   自建云端版（DEMO_MODE = false）：填上自己的 endpoint / publishableKey，
+                                并把整目录（含 ocr/）部署到你的静态托管。
+   ========================================================================= */
+const DEMO_MODE = true;
 const publicConfig = {
-  endpoint: "https://YOUR-APP-ID.app.workbuddy.host",
-  publishableKey: "wbpk_YOUR_APP_ID_YOUR_PUBLISHABLE_KEY",
+  endpoint: "",       // 例：https://YOUR-APP-ID.app.workbuddy.host
+  publishableKey: "", // 例：wbpk_YOUR_APP_ID_YOUR_PUBLISHABLE_KEY
 };
 let cloud = null;
 function startCloud() {
-  cloud = WorkBuddyCloud.createWorkBuddyCloud({
-    endpoint: publicConfig.endpoint,
-    publishableKey: publicConfig.publishableKey,
-  });
+  cloud = DEMO_MODE
+    ? createLocalDemoCloud()
+    : WorkBuddyCloud.createWorkBuddyCloud({ endpoint: publicConfig.endpoint, publishableKey: publicConfig.publishableKey });
   cloud.auth.onAuthStateChange(function (event) {
     if (event === "SIGNED_OUT") { showAuth(); }
   });
   init();
 }
-
+if (DEMO_MODE) {
+  // 演示模式不加载云 SDK，因此离线也能完整运行。
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { startCloud(); }, { once: true });
+  else startCloud();
+} else {
+  /* 加载云服务 SDK：主域在国内偶发不通，带镜像自动切换 */
+  (function () {
+    var urls = [
+      "https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js",
+      "https://fastly.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js",
+      "https://unpkg.com/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"
+    ];
+    var i = 0;
+    function next() {
+      if (i >= urls.length) {
+        document.body.insertAdjacentHTML("afterbegin",
+          '<div style="max-width:720px;margin:20px auto;padding:12px 14px;border-radius:12px;background:#fdecec;color:#e5484d;font-size:13px">依赖加载失败：请检查网络后刷新页面重试。</div>');
+        return;
+      }
+      var s = document.createElement("script");
+      s.src = urls[i++];
+      s.onload = function () {
+        if (!window.WorkBuddyCloud) return next();
+        // SDK may finish before the parser reaches the application script.
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", function () { startCloud(); }, { once: true });
+        } else startCloud();
+      };
+      s.onerror = next;
+      document.head.appendChild(s);
+    }
+    next();
+  })();
+}
+</script>
+<script>
 const COURSES = [
   { name: "高等数学", color: "#e8c93f" },
   { name: "大学英语", color: "#4aa8dd" },
@@ -2053,6 +2063,345 @@ document.querySelectorAll(".field").forEach(field => {
   const label = field.querySelector("label"), input = field.querySelector("input,select,textarea");
   if (label && input) label.htmlFor = input.id;
 });
+</script>
+<script>
+/* ============================================================================
+   演示模式后端（公开演示版专用，不参与个人版）
+   ----------------------------------------------------------------------------
+   这个文件由 publish-public.sh 内联进公开版的 index.html。
+   它用浏览器 localStorage 模拟「云端数据库 + 登录」，让任何人打开网页就能
+   直接用（不需要账号、不需要联网、数据只存在自己的浏览器里）。
+
+   自建云端版：把 index.html 里的 DEMO_MODE 改成 false，并填写自己的
+   endpoint / publishableKey 即可，本文件的所有能力会自动让位给真实云端。
+   ============================================================================ */
+(function () {
+  "use strict";
+
+  var NS = "homework-tracker-demo";
+  var DEMO_EMAIL = "演示账号（数据存本机）";
+  var DEMO_USER_ID = "demo-user";
+  var REPO_URL = "https://github.com/ZhangYitian-world/student-plan-miniapp";
+
+  /* ---------------------------------------------------------------- 存储层 */
+  function readRaw(key) {
+    try { return localStorage.getItem(NS + ":" + key); } catch (e) { return null; }
+  }
+  function writeRaw(key, value) {
+    try { localStorage.setItem(NS + ":" + key, value); } catch (e) {}
+  }
+  function clone(value) {
+    try { return JSON.parse(JSON.stringify(value)); } catch (e) { return value; }
+  }
+  function loadRows(table) {
+    var raw = readRaw("table:" + table);
+    if (raw === null) {
+      var seeded = seedRows(table);
+      writeRaw("table:" + table, JSON.stringify(seeded));
+      writeRaw("seq:" + table, String(maxId(seeded)));
+      return seeded;
+    }
+    try { var rows = JSON.parse(raw); return Array.isArray(rows) ? rows : []; }
+    catch (e) { return []; }
+  }
+  function saveRows(table, rows) {
+    writeRaw("table:" + table, JSON.stringify(rows));
+  }
+  function maxId(rows) {
+    return rows.reduce(function (max, row) {
+      var n = parseInt(row && row.id, 10);
+      return isNaN(n) ? max : Math.max(max, n);
+    }, 0);
+  }
+  function nextId(table) {
+    var n = (parseInt(readRaw("seq:" + table) || "0", 10) || 0) + 1;
+    writeRaw("seq:" + table, String(n));
+    return n;
+  }
+
+  /* ------------------------------------------------------- 极简查询构造器 */
+  /* 支持首页用到的全部写法：
+       .select(cols).order(col,{...}).order(col)      -> { data, error }
+       .insert(payload).select()
+       .update(payload).eq(col,val).eq(col2,val2).select()
+       .delete().eq(col,val).select()
+     对象带 then()，所以可以 await。                                          */
+  function makeMatcher(filters) {
+    return function (row) {
+      return filters.every(function (f) {
+        return String(row[f[0]]) === String(f[1]);
+      });
+    };
+  }
+  function makeComparator(orders) {
+    return function (a, b) {
+      for (var i = 0; i < orders.length; i++) {
+        var col = orders[i][0], opt = orders[i][1] || {};
+        var av = a[col], bv = b[col];
+        var an = av === null || av === undefined || av === "";
+        var bn = bv === null || bv === undefined || bv === "";
+        if (opt.nullsFirst === false) { if (an !== bn) return an ? 1 : -1; }
+        else if (opt.nullsFirst === true) { if (an !== bn) return an ? -1 : 1; }
+        if (an && bn) continue;
+        var x = av, y = bv;
+        var xn = Number(x), yn = Number(y);
+        if (!isNaN(xn) && !isNaN(yn) && String(xn) === String(x) && String(yn) === String(y)) { x = xn; y = yn; }
+        if (x < y) return opt.ascending === false ? 1 : -1;
+        if (x > y) return opt.ascending === false ? -1 : 1;
+      }
+      return 0;
+    };
+  }
+  function execute(st) {
+    var rows = loadRows(st.table);
+    var matcher = makeMatcher(st.filters);
+
+    if (st.action === "insert") {
+      var row = Object.assign({}, st.payload);
+      row.id = String(nextId(st.table));
+      row.owner_id = DEMO_USER_ID;
+      row.created_at = new Date().toISOString();
+      if (st.table === "timetables") {
+        row.revision = Number(row.revision) || 1;
+        row.updated_at = row.created_at;
+      }
+      rows.push(row);
+      saveRows(st.table, rows);
+      return { data: [clone(row)], error: null };
+    }
+
+    if (st.action === "update") {
+      var hit = rows.filter(matcher);
+      hit.forEach(function (r) {
+        Object.assign(r, clone(st.payload));
+        if (st.table === "timetables") r.updated_at = new Date().toISOString();
+      });
+      saveRows(st.table, rows);
+      return { data: clone(hit), error: null };
+    }
+
+    if (st.action === "delete") {
+      var gone = rows.filter(matcher);
+      saveRows(st.table, rows.filter(function (r) { return !matcher(r); }));
+      return { data: clone(gone), error: null };
+    }
+
+    var out = rows.filter(matcher).map(clone);
+    if (st.orders.length) out.sort(makeComparator(st.orders));
+    return { data: out, error: null };
+  }
+  function from(table) {
+    var st = { table: table, action: "select", payload: null, filters: [], orders: [] };
+    var api = {
+      select: function () { return api; },
+      insert: function (payload) { st.action = "insert"; st.payload = payload || {}; return api; },
+      update: function (payload) { st.action = "update"; st.payload = payload || {}; return api; },
+      "delete": function () { st.action = "delete"; return api; },
+      eq: function (column, value) { st.filters.push([column, value]); return api; },
+      order: function (column, options) { st.orders.push([column, options || {}]); return api; },
+      then: function (resolve) {
+        var result;
+        try { result = execute(st); }
+        catch (e) { result = { data: null, error: { message: e && e.message ? e.message : String(e) } }; }
+        resolve(result);
+      }
+    };
+    return api;
+  }
+
+  /* -------------------------------------------------------------- 登录壳 */
+  var listeners = [];
+  function demoUser() { return { id: DEMO_USER_ID, email: DEMO_EMAIL, user_metadata: {} }; }
+  function ok(data) { return Promise.resolve({ data: data === undefined ? null : data, error: null }); }
+  var auth = {
+    onAuthStateChange: function (cb) {
+      if (typeof cb === "function") listeners.push(cb);
+      return { data: { subscription: { unsubscribe: function () {} } } };
+    },
+    getSession: function () { return ok({ user: demoUser() }); },
+    getUser: function () { return ok({ user: demoUser() }); },
+    signInWithPassword: function () { return ok({ user: demoUser() }); },
+    signInWithOtp: function () { return ok({ verify: function () { return ok({ user: demoUser() }); } }); },
+    sendOtp: function () { return ok({ verificationId: "demo", isExistingUser: false }); },
+    verifyOtp: function () { return ok({ user: demoUser() }); },
+    resetPasswordForEmail: function () { return ok({ updateUser: function () { return ok({ user: demoUser() }); } }); },
+    signOut: function () { return ok(null); }
+  };
+
+  /* ------------------------------------------------------------ 示例数据 */
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function isoAt(offsetDays) {
+    var d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + offsetDays);
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  }
+  function thisMonday(offsetDays) {
+    var d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + (offsetDays || 0) - ((d.getDay() + 6) % 7));
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  }
+  function weekRange(from, to) {
+    var out = [];
+    for (var i = from; i <= to; i++) out.push(i);
+    return out;
+  }
+  function seedRows(table) {
+    if (table === "homework") {
+      var rows = [
+        { kind: "course", course: "高等数学", title: "习题 3.4（第 1–12 题）", due_date: isoAt(-2), due_time: "23:59:00", status: "todo", note: "课本 P88，写清推导过程", location: null },
+        { kind: "course", course: "大学英语", title: "Unit 5 听力作业", due_date: isoAt(0), due_time: "20:00:00", status: "doing", note: "在线平台，可重做两次", location: null },
+        { kind: "course", course: "数据结构", title: "实验二：二叉树遍历", due_date: isoAt(1), due_time: "23:59:00", status: "todo", note: null, location: null },
+        { kind: "course", course: "大学物理", title: "第 7 章课后题", due_date: isoAt(3), due_time: "23:59:00", status: "todo", note: "只做奇数题", location: null },
+        { kind: "course", course: "高等数学", title: "期中复习提纲", due_date: isoAt(7), due_time: null, status: "todo", note: null, location: null },
+        { kind: "course", course: "大学英语", title: "小组汇报 PPT", due_date: isoAt(-6), due_time: null, status: "done", note: "已完成", location: null },
+        { kind: "course", course: "数据结构", title: "课程设计选题登记", due_date: isoAt(12), due_time: null, status: "todo", note: null, location: null },
+        { kind: "event", course: "讲座", title: "「信息检索」工作坊", due_date: isoAt(2), due_time: "14:00:00", status: "todo", note: "需提前报名", location: "图书馆 3 楼培训室" },
+        { kind: "event", course: "社团", title: "摄影社外拍", due_date: isoAt(5), due_time: "09:00:00", status: "todo", note: "自带相机", location: "市中心公园东门" },
+        { kind: "event", course: "班级", title: "班会（地点待定）", due_date: null, due_time: null, status: "todo", note: null, location: null },
+        { kind: "explore", course: "技术", title: "搞懂行级权限（RLS）到底怎么工作", due_date: null, due_time: null, status: "doing", note: "先读云服务文档，再动手建一张表试试", location: null },
+        { kind: "explore", course: "工具", title: "用 Tesseract.js 把课表截图转成结构化数据", due_date: null, due_time: null, status: "done", note: "已跑通；识别结果一定要人工校正", location: null }
+      ];
+      var now = new Date().toISOString();
+      rows.forEach(function (r, i) { r.owner_id = DEMO_USER_ID; r.created_at = now; r.id = String(i + 1); });
+      return rows;
+    }
+    if (table === "timetables") {
+      var periods = [
+        ["08:00", "08:50"], ["09:00", "09:50"], ["10:10", "11:00"], ["11:10", "12:00"],
+        ["14:00", "14:50"], ["15:00", "15:50"], ["16:10", "17:00"], ["17:10", "18:00"],
+        ["18:30", "19:20"], ["19:30", "20:20"], ["20:30", "21:20"], ["21:30", "22:20"]
+      ];
+      var full = weekRange(1, 16);
+      var document = {
+        version: 1,
+        term: "2026–2027 第 1 学期",
+        periods: periods,
+        sessions: [
+          { name: "高等数学", location: "第一教学楼 A101", teacher: "王老师", code: "MATH101", day: 1, start: 1, end: 2, weeks: full.slice() },
+          { name: "大学英语", location: "外语楼 205", teacher: "李老师", code: "ENG101", day: 1, start: 3, end: 4, weeks: full.slice() },
+          { name: "数据结构", location: "信息楼 B303", teacher: "张老师", code: "CS201", day: 2, start: 1, end: 2, weeks: full.slice() },
+          { name: "大学物理", location: "物理楼 108", teacher: "刘老师", code: "PHY101", day: 3, start: 5, end: 6, weeks: full.slice() },
+          { name: "数据结构", location: "机房 C201", teacher: "张老师", code: "CS201", day: 4, start: 5, end: 6, weeks: full.slice() },
+          { name: "高等数学", location: "第一教学楼 A101", teacher: "王老师", code: "MATH101", day: 5, start: 3, end: 4, weeks: full.slice() }
+        ],
+        courses: ["线性代数"],
+        weekAnchor: { date: thisMonday(0), week: 8 }
+      };
+      return [{
+        id: "1",
+        owner_id: DEMO_USER_ID,
+        document: document,
+        revision: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }];
+    }
+    return [];
+  }
+
+  /* ------------------------------------------------- 界面上的演示提示 */
+  function injectStyles() {
+    var style = document.createElement("style");
+    style.textContent = [
+      ".demo-banner{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;",
+      "background:var(--accent-soft);border:1px solid #e2dafb;color:#4a3a9e;",
+      "border-radius:12px;padding:9px 12px;font-size:12.5px;line-height:1.55;margin-bottom:14px}",
+      ".demo-banner b{font-weight:600}",
+      ".demo-banner .demo-tag{background:var(--accent);color:#fff;border-radius:999px;",
+      "padding:1px 9px;font-size:11px;font-weight:600;flex-shrink:0;letter-spacing:.02em}",
+      ".demo-banner .demo-text{flex:1 1 200px;min-width:0}",
+      ".demo-banner a{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap}",
+      ".demo-banner a:hover{text-decoration:underline}"
+    ].join("");
+    document.head.appendChild(style);
+  }
+  function injectBanner() {
+    var app = document.getElementById("appView");
+    if (!app || document.getElementById("demoBanner")) return;
+    var banner = document.createElement("div");
+    banner.className = "demo-banner";
+    banner.id = "demoBanner";
+    var link = document.createElement("a");
+    link.href = REPO_URL;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = "换成自己的云端版 →";
+    banner.appendChild(tag("演示模式"));
+    banner.appendChild(text("这是可以直接试玩的版本：<b>数据只保存在这台设备的浏览器里</b>，换设备或清除网站数据就会丢失。"));
+    banner.appendChild(link);
+    app.insertBefore(banner, app.firstChild);
+  }
+  function tag(value) {
+    var el = document.createElement("span");
+    el.className = "demo-tag";
+    el.textContent = value;
+    return el;
+  }
+  function text(html) {
+    var el = document.createElement("span");
+    el.className = "demo-text";
+    el.innerHTML = html;
+    return el;
+  }
+
+  /* --------------------------------------------- 覆盖云端版的行为差异 */
+  function patchApp() {
+    // 演示版没有真实域名，跳过「请用发布后的链接登录」提示
+    window.checkOrigin = function () {
+      var tip = document.getElementById("originTip");
+      if (tip) tip.className = "msg";
+    };
+    // 同步条改成「本机存储」的说法
+    window.setSync = function (value, error) {
+      var el = document.getElementById("syncStatus");
+      if (!el) return;
+      var label = String(value == null ? "" : value);
+      if (!error) {
+        label = label.replace(/^正在同步…$/, "正在读取本机数据…").replace(/^已同步/, "本机已保存");
+      }
+      el.textContent = label || "数据保存在本机浏览器";
+      el.classList.toggle("error", !!error);
+    };
+    // 「退出」在演示版里变成「重置演示数据」
+    window.doSignOut = function () {
+      if (!confirm("演示模式：这会清空本机保存的演示数据，并恢复成初始示例。确定继续？")) return;
+      resetDemoData();
+      location.reload();
+    };
+    var resetLink = document.querySelector("#appView .user-bar .link");
+    if (resetLink) {
+      resetLink.textContent = "重置演示";
+      resetLink.setAttribute("aria-label", "清空本机演示数据并恢复初始示例");
+    }
+    var refresh = document.getElementById("refresh-btn");
+    if (refresh) refresh.setAttribute("title", "重新读取本机数据");
+  }
+  function resetDemoData() {
+    try {
+      var keys = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf(NS + ":") === 0) keys.push(k);
+      }
+      keys.forEach(function (k) { localStorage.removeItem(k); });
+    } catch (e) {}
+  }
+
+  /* ------------------------------------------------------------- 对外 */
+  window.createLocalDemoCloud = function () {
+    return { auth: auth, database: { from: from }, demo: true };
+  };
+
+  injectStyles();
+  injectBanner();
+  patchApp();
+  if (!document.body.dataset.demoBound) {
+    document.body.dataset.demoBound = "1";
+    window.addEventListener("online", function () {});
+  }
+})();
 </script>
 </body>
 </html>
