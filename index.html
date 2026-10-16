@@ -283,6 +283,9 @@
   .tt-head h2 { font-size:18px; }
   .tt-actions { display:flex; gap:8px; flex-wrap:wrap; }
   .tt-meta { color:var(--text-2); font-size:13px; margin-bottom:12px; }
+  .tt-week-nav { display:flex; gap:10px; align-items:flex-end; margin-bottom:12px; }
+  .tt-week-nav .field { flex:1; min-width:0; margin:0; }
+  .tt-week-nav .btn { flex-shrink:0; min-height:44px; }
   .tt-scroll { overflow-x:auto; background:white; border:1px solid var(--line-2); border-radius:8px; }
   .tt-grid { display:grid; width:100%; grid-template-columns:54px repeat(7,minmax(0,1fr)); grid-template-rows:40px repeat(12,60px); position:relative; }
   .tt-cell { min-width:0; border-right:1px solid var(--line); border-bottom:1px solid var(--line); padding:6px 2px; font-size:12px; text-align:center; }
@@ -442,7 +445,7 @@
   <div class="msg" id="dataMsg" role="alert"></div>
   <div id="list"><div class="loading">正在读取云端数据…</div></div>
   <section id="tt-view" class="hidden">
-    <div class="tt-head"><h2>我的课表</h2><div class="tt-actions"><button class="btn ghost sm" onclick="openTimetableEditor('edit')">校正课表</button><button class="btn sm" onclick="openTimetableEditor('import')">导入课程详情</button></div></div>
+    <div class="tt-head"><h2>我的课表</h2><div class="tt-actions"><button class="btn ghost sm" id="tt-week-settings" onclick="openTimetableWeekSettings()">设置本周</button><button class="btn ghost sm" onclick="openTimetableEditor('edit')">校正课表</button><button class="btn sm" onclick="openTimetableEditor('import')">导入课程详情</button></div></div>
     <div class="msg" id="tt-load-msg" role="alert"></div>
     <div id="tt-display"></div>
   </section>
@@ -524,6 +527,17 @@
   </div>
 </div>
 
+<div class="overlay" id="tt-week-overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tt-week-title">
+    <h2 id="tt-week-title">设置当前教学周</h2>
+    <div class="field"><label for="tt-anchor-date">参考日期</label><input type="date" id="tt-anchor-date" /></div>
+    <div class="field"><label for="tt-anchor-week">这一天是第几教学周</label><input type="number" id="tt-anchor-week" min="1" max="30" step="1" inputmode="numeric" placeholder="1–30" /></div>
+    <p class="tt-note">按周一开始计算。保存一次后，每周自动递增，手机与电脑共用这项设置。</p>
+    <div class="msg" id="tt-week-msg" role="alert"></div>
+    <div class="modal-foot"><button class="btn plain" id="tt-week-cancel" onclick="closeTimetableWeekSettings()">取消</button><button class="btn" id="tt-week-save" onclick="saveTimetableWeekSettings()">保存并回到本周</button></div>
+  </div>
+</div>
+
 <script>
 /* 加载云服务 SDK：主域在国内偶发不通，带镜像自动切换 */
 (function () {
@@ -601,6 +615,7 @@ const TT_PERIODS = [["08:00","08:50"],["09:00","09:50"],["10:10","11:00"],["11:1
 let timetable = null, timetableRow = null, ttDraft = null, ttImage = null;
 let ttWorker = null, ttOcrRun = 0, ttOcrBusy = false, ttSaving = false, ttLoadSequence = 0;
 let ttSelectedWeek = null, ttLoadOK = false;
+let ttWeekManual = false, ttViewedMonday = null, ttWeekReturnFocus = null;
 let ttDetailFiles = [], ttActiveDetail = null, ttImageLoadSequence = 0, ttImageLoading = false;
 let ttDetailId = 0;
 
@@ -643,6 +658,9 @@ function showAuth() {
   items = [];
   cancelTimetableOcr();
   timetable = null; timetableRow = null; ttDraft = null; ttImage = null; ttLoadOK = false; ttSelectedWeek = null;
+  ttWeekManual = false; ttViewedMonday = null;
+  closeTimetableWeekSettings(true);
+  $("tt-anchor-date").value = ""; $("tt-anchor-week").value = ""; hideMsg("tt-week-msg");
   clearTimetableImages();
   ttLoadSequence++;
   $("tt-editor").classList.add("hidden");
@@ -691,8 +709,10 @@ function switchTab(tab) {
 function setView(v) {
   if (view === v || saving || $("overlay").classList.contains("show")) return;
   if (ttSaving) return;
+  if ($("tt-week-overlay").classList.contains("show")) return;
   if (ttDraft && !closeTimetableEditor()) return;
   view = v;
+  if (v === "timetable" && timetable && timetable.weekAnchor) resetTimetableWeek(false);
   filter = "all";
   keyword = "";
   $("search").value = "";
@@ -1200,6 +1220,87 @@ document.addEventListener("keydown", function (e) {
   }
 });
 /* ================= Personal timetable ================= */
+function timetableCalendarDay(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [year,month,day] = value.split("-").map(Number), timestamp = Date.UTC(year,month-1,day);
+  const date = new Date(timestamp);
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month-1 || date.getUTCDate() !== day) return null;
+  return timestamp/86400000;
+}
+function timetableMonday(value) {
+  const day = timetableCalendarDay(value);
+  return day === null ? null : day-(new Date(day*86400000).getUTCDay()+6)%7;
+}
+function validTimetableWeekAnchor(anchor) {
+  return !!anchor && timetableCalendarDay(anchor.date) !== null && Number.isInteger(anchor.week) && anchor.week >= 1 && anchor.week <= 30;
+}
+function currentTimetableWeek(doc = timetable, date = new Date()) {
+  if (!doc || !validTimetableWeekAnchor(doc.weekAnchor)) return null;
+  // Compare calendar Mondays in UTC so local DST changes cannot shift a teaching week.
+  return doc.weekAnchor.week+(timetableMonday(dateKey(date))-timetableMonday(doc.weekAnchor.date))/7;
+}
+function resetTimetableWeek(render = true) {
+  ttWeekManual = false; ttSelectedWeek = null;
+  if (render) renderTimetable();
+}
+function selectTimetableWeek(value) {
+  ttSelectedWeek = +value || null; ttWeekManual = true; renderTimetable();
+}
+function openTimetableWeekSettings() {
+  if (ttDraft || ttSaving || $("overlay").classList.contains("show")) return;
+  if (!ttLoadOK) return showMsg("tt-load-msg","请先完成课表同步，再设置当前教学周");
+  ttWeekReturnFocus = document.activeElement;
+  $("tt-anchor-date").value = dateKey(new Date());
+  const week = currentTimetableWeek();
+  $("tt-anchor-week").value = week >= 1 && week <= 30 ? week : "";
+  hideMsg("tt-week-msg");
+  $("tt-week-overlay").classList.add("show"); document.body.classList.add("modal-open");
+  $("tt-anchor-week").focus();
+}
+function closeTimetableWeekSettings(force = false) {
+  if (ttSaving && !force) return;
+  $("tt-week-overlay").classList.remove("show"); document.body.classList.remove("modal-open");
+  if (!force && ttWeekReturnFocus && ttWeekReturnFocus.isConnected) ttWeekReturnFocus.focus();
+  ttWeekReturnFocus = null;
+}
+async function saveTimetableWeekSettings() {
+  if (ttDraft || ttSaving) return;
+  hideMsg("tt-week-msg");
+  const weekAnchor = {date:$("tt-anchor-date").value,week:Number($("tt-anchor-week").value)};
+  if (!validTimetableWeekAnchor(weekAnchor)) return showMsg("tt-week-msg","请选择有效日期，并填写 1–30 之间的整数教学周");
+  if (!ttLoadOK || !navigator.onLine) return showMsg("tt-week-msg","请先联网并完成课表同步，再保存设置");
+  const doc = timetable ? structuredClone(timetable) : {version:1,term:"",periods:structuredClone(TT_PERIODS),sessions:[]};
+  doc.weekAnchor = weekAnchor;
+  const epoch = sessionEpoch, revision = timetableRow ? timetableRow.revision : 0;
+  ttLoadSequence++; ttSaving = true;
+  busy("tt-week-save",true,"保存中…","保存并回到本周");
+  ["tt-anchor-date","tt-anchor-week","tt-week-cancel"].forEach(id => $(id).disabled = true);
+  try {
+    const q = cloud.database.from("timetables");
+    const result = timetableRow
+      ? await q.update({document:doc,revision:revision+1}).eq("id",timetableRow.id).eq("revision",revision).select()
+      : await q.insert({document:doc,revision:1}).select();
+    if (epoch !== sessionEpoch) return;
+    if (result.error) throw new Error("本周设置未保存，请检查网络后重试");
+    if (!result.data || result.data.length !== 1) throw new Error("课表已被其他设备修改。本次未覆盖，请取消并刷新后重新设置");
+    timetable = doc; timetableRow = result.data[0];
+    resetTimetableWeek(false); ttSaving = false; closeTimetableWeekSettings(); renderTimetable();
+    showMsg("tt-load-msg","教学周设置已保存，将按周一自动递增","ok");
+  } catch (e) { if (epoch === sessionEpoch) showMsg("tt-week-msg",e.message || "设置保存失败，请重试"); }
+  finally {
+    ttSaving = false; busy("tt-week-save",false,"","保存并回到本周");
+    ["tt-anchor-date","tt-anchor-week","tt-week-cancel"].forEach(id => $(id).disabled = false);
+  }
+}
+$("tt-week-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) closeTimetableWeekSettings(); });
+$("tt-week-overlay").addEventListener("keydown", e => {
+  if (e.key === "Escape") { e.preventDefault(); closeTimetableWeekSettings(); }
+  if (e.key !== "Tab") return;
+  const controls = [...$("tt-week-overlay").querySelectorAll("input,button")].filter(el => !el.disabled && el.getClientRects().length);
+  const first = controls[0], last = controls[controls.length-1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 function parseWeeks(text) {
   const value = String(text || "").replace(/[，、]/g, ",").replace(/[–—~～]/g, "-").replace(/周/g, "").replace(/\s/g, "");
   if (!value) throw new Error("请填写每门课已核实的周次");
@@ -1217,6 +1318,7 @@ function parseWeeks(text) {
 function validTimetableDocument(doc) {
   if (!doc || doc.version !== 1 || typeof doc.term !== "string" || doc.term.length > 80 || !Array.isArray(doc.periods) || doc.periods.length !== 12 || !Array.isArray(doc.sessions) || doc.sessions.length > 300) return false;
   if (doc.courses !== undefined && (!Array.isArray(doc.courses) || doc.courses.length > 300 || !doc.courses.every(n => typeof n === "string" && n.trim() && n.length <= 200))) return false;
+  if (doc.weekAnchor !== undefined && !validTimetableWeekAnchor(doc.weekAnchor)) return false;
   let previousEnd = "00:00";
   for (const p of doc.periods) {
     if (!Array.isArray(p) || p.length !== 2 || !p.every(v => /^([01]\d|2[0-3]):[0-5]\d$/.test(v)) || p[0] >= p[1] || p[0] < previousEnd) return false;
@@ -1233,6 +1335,7 @@ async function loadTimetable() {
     if (error) throw error;
     const row = data && data[0];
     if (row && !validTimetableDocument(row.document)) throw new Error("课表数据格式不正确");
+    if (JSON.stringify((timetable && timetable.weekAnchor) || null) !== JSON.stringify((row && row.document.weekAnchor) || null)) resetTimetableWeek(false);
     timetableRow = row || null;
     timetable = row ? row.document : null;
     ttLoadOK = true;
@@ -1261,17 +1364,23 @@ function renderTimetable() {
   const sessions = timetable.sessions || [];
   const courses = timetable.courses || [];
   const weeks = [...new Set(sessions.flatMap(s => s.weeks))].sort((a,b) => a-b);
+  const monday = timetableMonday(dateKey(new Date()));
+  if (ttViewedMonday !== null && ttViewedMonday !== monday) resetTimetableWeek(false);
+  ttViewedMonday = monday;
+  const current = currentTimetableWeek(), currentInRange = current !== null && current >= 1 && current <= 30;
+  if (!ttWeekManual && current !== null) ttSelectedWeek = currentInRange ? current : null;
+  if (!Number.isInteger(ttSelectedWeek) || ttSelectedWeek < 1 || ttSelectedWeek > 30) ttSelectedWeek = null;
   let html = '<div class="tt-meta">' + esc(timetable.term || "学期未填写") + ' · ' + (sessions.length ? '已确认 ' + new Set(sessions.map(s => s.name)).size + ' 门课' : '周课表');
-  if (sessions.length) {
-    if (!Number.isInteger(ttSelectedWeek) || ttSelectedWeek < 1 || ttSelectedWeek > 30) ttSelectedWeek = weeks[0];
-    html += '</div><div class="field"><label for="tt-week-view">查看周次</label><select id="tt-week-view" onchange="ttSelectedWeek=+this.value;renderTimetable()">' + Array.from({length:30},(_,i) => '<option value="'+(i+1)+'"'+(ttSelectedWeek===i+1?' selected':'')+'>第 '+(i+1)+' 周'+(weeks.includes(i+1)?'':' · 未录入课程')+'</option>').join("") + '</select></div>';
-  } else {
-    html += '</div><div class="tt-unplaced"><div><strong>课程安排尚未录入</strong><p>课程名称已保留，但缺少星期、节次或周次，暂时无法放入具体格子。导入截图或校正后，课表会显示在下方。</p></div>' +
+  html += '</div><p class="tt-meta">'+(currentInRange ? '本周 · 第 '+current+' 周' : current === null ? '当前教学周尚未设置，请点“设置本周”校准一次。' : '当前日期不在第 1–30 教学周内，请核对学期和本周设置。')+'</p>';
+  html += '<div class="tt-week-nav"><div class="field"><label for="tt-week-view">查看周次</label><select id="tt-week-view" onchange="selectTimetableWeek(this.value)"><option value="" disabled'+(ttSelectedWeek === null?' selected':'')+'>请选择周次</option>' + Array.from({length:30},(_,i) => '<option value="'+(i+1)+'"'+(ttSelectedWeek===i+1?' selected':'')+'>第 '+(i+1)+' 周'+(current === i+1?' · 本周':'')+(weeks.includes(i+1)?'':' · 未录入课程')+'</option>').join("") + '</select></div><button class="btn ghost sm" onclick="resetTimetableWeek()"'+(currentInRange?'':' disabled')+'>回到本周</button></div>';
+  if (!sessions.length) {
+    html += '<div class="tt-unplaced"><div><strong>课程安排尚未录入</strong><p>课程名称已保留，但缺少星期、节次或周次，暂时无法放入具体格子。导入截图或校正后，课表会显示在下方。</p></div>' +
       (courses.length ? '<details><summary>课程名单 · '+courses.length+' 门</summary><ul>'+courses.map(name => '<li>'+esc(name)+'</li>').join('')+'</ul></details>' : '') + '</div>';
   }
-  const selectedWeek = sessions.length ? ttSelectedWeek : null;
+  const selectedWeek = ttSelectedWeek;
   const lessons = selectedWeek ? sessions.filter(s => s.weeks.includes(selectedWeek)) : [];
-  if (sessions.length && !lessons.length) html += '<p class="tt-note">该周暂无已录入课程，不代表这周没有课。</p>';
+  if (sessions.length && !selectedWeek) html += '<p class="tt-note">请先设置本周，或选择要查看的周次。</p>';
+  else if (sessions.length && !lessons.length) html += '<p class="tt-note">该周暂无已录入课程，不代表这周没有课。</p>';
   html += '<div class="tt-scroll"><div class="tt-grid"><div class="tt-cell" style="grid-area:1/1">节次</div>' + TT_DAYS.map((d,i) => '<div class="tt-cell" style="grid-area:1/'+(i+2)+'">'+d+'</div>').join("");
   timetable.periods.forEach((p,i) => {
     html += '<div class="tt-cell" style="grid-area:'+(i+2)+'/1">第 '+(i+1)+' 节<small>'+p[0]+'<br>'+p[1]+'</small></div>';
@@ -1431,6 +1540,7 @@ async function saveTimetable() {
     if (merge && timetable && timetable.sessions.length && timetable.term !== term) throw new Error("学期与现有课表不同，请切换为替换整张课表，或改为相同学期");
     if (merge && timetable && timetable.sessions.length && JSON.stringify(timetable.periods) !== JSON.stringify(ttDraft.periods)) throw new Error("课时钟点与现有课表不同。请统一时间后合并，或替换整张课表");
     document = {version:1,term,periods:structuredClone(ttDraft.periods),sessions:merge && timetable ? mergeTimetableSessions(timetable.sessions,incoming) : incoming};
+    if (timetable && timetable.weekAnchor && (!timetable.term || timetable.term === term)) document.weekAnchor = structuredClone(timetable.weekAnchor);
     if (timetable && timetable.courses) document.courses = [...timetable.courses];
     if (!validTimetableDocument(document)) throw new Error("请检查完整课程名、星期、节次及 12 节的起止时间；不允许缺失或倒序");
     const conflict = timetableConflicts(document.sessions); if (conflict) throw new Error(conflict);
@@ -1449,7 +1559,7 @@ async function saveTimetable() {
     if (result.error) throw new Error("云端未保存，请检查网络。若其他设备已更新课表，先导出待保存内容，再返回刷新。");
     if (!result.data || result.data.length !== 1) throw new Error("课表已被其他设备修改。本次未覆盖，请先导出待保存内容，再返回刷新。");
     timetableRow = result.data[0]; timetable = document;
-    ttSelectedWeek = +( $("tt-source-week").value) || (document.sessions[0] && document.sessions[0].weeks[0]) || 1;
+    resetTimetableWeek(false);
     ttSaving = false;
     closeTimetableEditor(true);
     refreshCourseOptions(); renderSignature = "";
@@ -1925,12 +2035,18 @@ async function recognizeTimetable() {
 }
 window.addEventListener("beforeunload", e => { if (ttDraft || ttSaving) { e.preventDefault(); e.returnValue = ""; } });
 
-function refreshWhenVisible() {
-  if (document.visibilityState === "visible" && !$("appView").classList.contains("hidden")) loadItems({ quiet:true });
+function refreshWhenVisible(event) {
+  if (document.visibilityState !== "visible" || $("appView").classList.contains("hidden")) return;
+  if (!ttDraft && !ttSaving) {
+    if (event && ["focus","visibilitychange","pageshow"].includes(event.type)) resetTimetableWeek(false);
+    if (view === "timetable") renderTimetable();
+  }
+  loadItems({ quiet:true });
 }
 document.addEventListener("visibilitychange", refreshWhenVisible);
 window.addEventListener("focus", refreshWhenVisible);
 window.addEventListener("online", refreshWhenVisible);
+window.addEventListener("pageshow", refreshWhenVisible);
 window.addEventListener("offline", () => { if (!$("appView").classList.contains("hidden")) setSync("网络已断开", true); });
 setInterval(refreshWhenVisible, 45000);
 document.querySelectorAll(".field").forEach(field => {
